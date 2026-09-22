@@ -1,0 +1,47 @@
+{
+  "format": "MasterPortxx",
+  "format_version": 1,
+  "packer_version": "1.3",
+  "package_id": "0001",
+  "original_name": "Limbo1",
+  "compression": "zip",
+  "part_size_bytes": 26214400,
+  "source_size_bytes": 134462848,
+  "file_count": 47,
+  "payload": "payload.zip",
+  "parts": [
+    {
+      "index": 1,
+      "file": "MasterPortxx_0001.mpx",
+      "size_bytes": 26214400,
+      "sha256": "c1995dbca54834598514c102f0d46eef6069442f1f5e998ba4491f0c32c940e0"
+    },
+    {
+      "index": 2,
+      "file": "MasterPortxx_0002.mpx",
+      "size_bytes": 26214400,
+      "sha256": "05d1cca9ac9e0b72b91a0d2f75736ad72835c636a8eddb3be8bf680769427151"
+    },
+    {
+      "index": 3,
+      "file": "MasterPortxx_0003.mpx",
+      "size_bytes": 26214400,
+      "sha256": "b011dff61b57bb7293f065e7a07b6f711ece2ed79be900b9bf621c5eb6822d62"
+    },
+    {
+      "index": 4,
+      "file": "MasterPortxx_0004.mpx",
+      "size_bytes": 26214400,
+      "sha256": "60ace16dd91e6040d3f62a947a4ceb7cd26b8bfe80c154a9cec4376cc23ef85f"
+    },
+    {
+      "index": 5,
+      "file": "MasterPortxx_0005.mpx",
+      "size_bytes": 228298,
+      "sha256": "2d32172f743fd414add20537ce651f49e6d0a968a424cd75a2162df324745094"
+    }
+  ],
+  "zip_size_bytes": 105085898,
+  "total_parts": 5,
+  "created_at": "2026-09-22T18:45:26"
+}
