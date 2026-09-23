@@ -18,8 +18,143 @@
 # ============================================================
 
 import os
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
 import json
-import input
+# KNULLI/PortMaster input bridge: GPTOKEYB converts the physical gamepad into SDL keyboard events.
+import ctypes
+import atexit
+import shlex
+try:
+    import sdl2
+except Exception:
+    sdl2 = None
+
+class SDLInputBridge:
+    def __init__(self):
+        self.codeName = ""
+        self.value = 0
+        self._gptokeyb = None
+        self._gptk_path = os.path.join(APP_DIR, "masterportxx.gptk")
+
+    def _key_name(self, sym):
+        if sdl2 is None:
+            return None
+        m = {
+            getattr(sdl2, "SDLK_UP", 1073741906): "DY+",
+            getattr(sdl2, "SDLK_DOWN", 1073741905): "DY-",
+            getattr(sdl2, "SDLK_LEFT", 1073741904): "DX-",
+            getattr(sdl2, "SDLK_RIGHT", 1073741903): "DX+",
+            getattr(sdl2, "SDLK_x", ord("x")): "A",
+            getattr(sdl2, "SDLK_z", ord("z")): "B",
+            getattr(sdl2, "SDLK_c", ord("c")): "X",
+            getattr(sdl2, "SDLK_a", ord("a")): "Y",
+            getattr(sdl2, "SDLK_RETURN", 13): "START",
+            getattr(sdl2, "SDLK_ESCAPE", 27): "B",
+            getattr(sdl2, "SDLK_BACKSPACE", 8): "B",
+        }
+        return m.get(sym)
+
+    def check(self):
+        self.codeName = ""
+        self.value = 0
+        if sdl2 is None:
+            return
+        ev = sdl2.SDL_Event()
+        while sdl2.SDL_PollEvent(ctypes.byref(ev)):
+            if ev.type == sdl2.SDL_KEYDOWN:
+                name = self._key_name(ev.key.keysym.sym)
+                if name:
+                    self.codeName = name
+                    self.value = 1
+                    return
+            elif ev.type == sdl2.SDL_KEYUP:
+                name = self._key_name(ev.key.keysym.sym)
+                if name:
+                    self.codeName = name
+                    self.value = -1
+                    return
+            elif ev.type == sdl2.SDL_QUIT:
+                self.codeName = "B"
+                self.value = 1
+                return
+
+    def key(self, keyCodeName, keyValue=99):
+        if self.codeName == keyCodeName:
+            return self.value == keyValue if keyValue != 99 else True
+        return False
+
+    def slide_key(self):
+        return bool(self.codeName)
+
+    def reset_input(self):
+        self.codeName = ""
+        self.value = 0
+
+    def start_gptokeyb(self):
+        if self._gptokeyb is not None and self._gptokeyb.poll() is None:
+            return True
+        try:
+            gptk = "\n".join([
+                "# MasterPortxx Knulli controls",
+                "start = enter", "guide = enter",
+                "a = x", "b = z", "x = c", "y = a",
+                "up = up", "down = down", "left = left", "right = right",
+                "up = repeat", "down = repeat", "left = repeat", "right = repeat",
+                "left_analog_up = up", "left_analog_down = down",
+                "left_analog_left = left", "left_analog_right = right",
+                "left_analog_up = repeat", "left_analog_down = repeat",
+                "left_analog_left = repeat", "left_analog_right = repeat",
+                "left_analog_as_mouse = false", "right_analog_as_mouse = false",
+                "deadzone_x = 12000", "deadzone_y = 12000", "deadzone_triggers = 3000", ""
+            ])
+            with open(self._gptk_path, "w", encoding="utf-8") as f:
+                f.write(gptk)
+            try:
+                os.chmod("/dev/uinput", 0o666)
+            except Exception:
+                pass
+            gpt = os.environ.get("GPTOKEYB", "").strip()
+            if gpt:
+                cmd = shlex.split(gpt)
+            else:
+                candidates = [
+                    "/opt/system/Tools/PortMaster/gptokeyb",
+                    "/opt/tools/PortMaster/gptokeyb",
+                    "/roms/ports/PortMaster/gptokeyb",
+                ]
+                exe = next((p for p in candidates if os.path.exists(p)), None)
+                if not exe:
+                    print("GPTOKEYB não encontrado")
+                    return False
+                cmd = [exe]
+            try:
+                ctypes.CDLL(None).prctl(15, b"MasterPortxx", 0, 0, 0)
+            except Exception:
+                pass
+            cmd += ["MasterPortxx", "-c", self._gptk_path]
+            self._gptokeyb = subprocess.Popen(cmd, cwd=APP_DIR, env=os.environ.copy())
+            print("GPTOKEYB iniciado:", " ".join(cmd))
+            return True
+        except Exception as e:
+            print("Falha ao iniciar gptokeyb:", repr(e))
+            return False
+
+    def stop_gptokeyb(self):
+        p = self._gptokeyb
+        self._gptokeyb = None
+        if p is not None:
+            try:
+                if p.poll() is None:
+                    p.terminate()
+                    try:
+                        p.wait(timeout=1)
+                    except Exception:
+                        p.kill()
+            except Exception:
+                pass
+
+input = SDLInputBridge()
+atexit.register(input.stop_gptokeyb)
 import subprocess
 import zipfile
 import hashlib
@@ -42,7 +177,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.1.3"
+APP_VERSION = "v1.1.4"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -926,6 +1061,7 @@ def main():
     global selected, section, rom_system_selected, rom_file_selected, rom_system_path
 
     load_config()
+    input.start_gptokeyb()
 
     show_status("MASTERPORTXX", ["Conectando...", "", SERVER_URL])
 
