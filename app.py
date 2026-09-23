@@ -88,7 +88,7 @@ class MultiEvdevReader:
             if code in (self.BTN_DPAD_LEFT, self.KEY_LEFT): return 'DX-', value != 0
             if code in (self.BTN_DPAD_RIGHT, self.KEY_RIGHT): return 'DX+', value != 0
             # RG35XX H / input.py button codes
-            button_map = {304:'B',305:'A',306:'Y',307:'X',308:'L1',309:'R1',314:'L2',315:'R2',310:'SELECT',311:'START',312:'MENUF',114:'V+',115:'V-'}
+            button_map = {304:'A',305:'B',306:'Y',307:'X',308:'L1',309:'R1',314:'L2',315:'R2',310:'SELECT',311:'START',312:'MENUF',114:'V+',115:'V-'}
             if code in button_map: return button_map[code], value != 0
         elif typ == self.EV_ABS:
             if code in (self.ABS_HAT0X, self.ABS_X):
@@ -183,10 +183,10 @@ class SDLInputBridge:
             getattr(sdl2, "SDLK_DOWN", 1073741905): "DY-",
             getattr(sdl2, "SDLK_LEFT", 1073741904): "DX-",
             getattr(sdl2, "SDLK_RIGHT", 1073741903): "DX+",
-            getattr(sdl2, "SDLK_x", ord("x")): "B",
-            getattr(sdl2, "SDLK_z", ord("z")): "A",
-            getattr(sdl2, "SDLK_c", ord("c")): "Y",
-            getattr(sdl2, "SDLK_a", ord("a")): "X",
+            getattr(sdl2, "SDLK_x", ord("x")): "A",
+            getattr(sdl2, "SDLK_z", ord("z")): "B",
+            getattr(sdl2, "SDLK_c", ord("c")): "X",
+            getattr(sdl2, "SDLK_a", ord("a")): "Y",
             getattr(sdl2, "SDLK_RETURN", 13): "START",
             getattr(sdl2, "SDLK_ESCAPE", 27): "B",
             getattr(sdl2, "SDLK_BACKSPACE", 8): "B",
@@ -201,10 +201,10 @@ class SDLInputBridge:
             getattr(sdl2, "SDL_CONTROLLER_BUTTON_DPAD_DOWN", 12): "DY-",
             getattr(sdl2, "SDL_CONTROLLER_BUTTON_DPAD_LEFT", 13): "DX-",
             getattr(sdl2, "SDL_CONTROLLER_BUTTON_DPAD_RIGHT", 14): "DX+",
-            getattr(sdl2, "SDL_CONTROLLER_BUTTON_A", 0): "B",
-            getattr(sdl2, "SDL_CONTROLLER_BUTTON_B", 1): "A",
-            getattr(sdl2, "SDL_CONTROLLER_BUTTON_X", 2): "Y",
-            getattr(sdl2, "SDL_CONTROLLER_BUTTON_Y", 3): "X",
+            getattr(sdl2, "SDL_CONTROLLER_BUTTON_A", 0): "A",
+            getattr(sdl2, "SDL_CONTROLLER_BUTTON_B", 1): "B",
+            getattr(sdl2, "SDL_CONTROLLER_BUTTON_X", 2): "X",
+            getattr(sdl2, "SDL_CONTROLLER_BUTTON_Y", 3): "Y",
             getattr(sdl2, "SDL_CONTROLLER_BUTTON_START", 6): "START",
             getattr(sdl2, "SDL_CONTROLLER_BUTTON_BACK", 4): "SELECT",
         }
@@ -264,18 +264,25 @@ class SDLInputBridge:
     def check(self):
         self.codeName = ""
         self.value = 0
-        if self._poll_sdl():
-            return
 
-        # Fallback robusto: varre todos os /dev/input/event*, sem assumir event1.
+        # No RG35XX H/Knulli, o caminho EVDEV é o que já foi comprovado
+        # como correto para A/B/X/Y e para o D-pad. Ele tem prioridade para
+        # evitar que eventos virtuais do GPTOKEYB/SDL alterem a identificação
+        # física dos botões.
         try:
             name, value, raw_value = self._evdev.read()
             if name:
                 self.codeName = name
                 self.value = value
                 print("INPUT:", name, value, "raw=", raw_value)
+                return
         except Exception as exc:
-            print("EVDEV fallback failed:", repr(exc))
+            print("EVDEV read failed:", repr(exc))
+
+        # Se não houver evento EVDEV disponível, aceita SDL/GPTOKEYB como
+        # fallback. O mapeamento semântico continua sendo A/B/X/Y.
+        if self._poll_sdl():
+            return
 
     def key(self, keyCodeName, keyValue=99):
         # Compatibilidade: o evdev traduz o D-pad para DX+/DX-/DY+/DY-,
@@ -307,7 +314,7 @@ class SDLInputBridge:
         gptk = "\n".join([
             "# MasterPortxx Knulli controls",
             "start = enter", "guide = enter",
-            "a = z", "b = x", "x = a", "y = c",
+            "a = x", "b = z", "x = c", "y = a",
             "up = up", "down = down", "left = left", "right = right",
             "left_analog_up = up", "left_analog_down = down",
             "left_analog_left = left", "left_analog_right = right",
@@ -410,7 +417,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.1.9"
+APP_VERSION = "v1.2"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
