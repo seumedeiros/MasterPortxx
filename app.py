@@ -88,7 +88,7 @@ class MultiEvdevReader:
             if code in (self.BTN_DPAD_LEFT, self.KEY_LEFT): return 'DX-', value != 0
             if code in (self.BTN_DPAD_RIGHT, self.KEY_RIGHT): return 'DX+', value != 0
             # RG35XX H / input.py button codes
-            button_map = {304:'B',305:'A',306:'X',307:'Y',308:'L1',309:'R1',314:'L2',315:'R2',310:'SELECT',311:'START',312:'MENUF',114:'V+',115:'V-'}
+            button_map = {304:'B',305:'A',306:'Y',307:'X',308:'L1',309:'R1',314:'L2',315:'R2',310:'SELECT',311:'START',312:'MENUF',114:'V+',115:'V-'}
             if code in button_map: return button_map[code], value != 0
         elif typ == self.EV_ABS:
             if code in (self.ABS_HAT0X, self.ABS_X):
@@ -410,7 +410,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.1.8"
+APP_VERSION = "v1.1.9"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
