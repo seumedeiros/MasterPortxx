@@ -24,10 +24,105 @@ import json
 import ctypes
 import atexit
 import shlex
+import glob
+import select
+import struct
+import fcntl
 try:
     import sdl2
 except Exception:
     sdl2 = None
+
+class MultiEvdevReader:
+    """Lê os dispositivos evdev do Knulli sem assumir event1.
+
+    D-pad pode aparecer como BTN_DPAD_* (EV_KEY) ou ABS_HAT0X/Y (EV_ABS).
+    Também preserva os códigos usados pelo input.py antigo do RG35XX H.
+    """
+    EV_KEY = 0x01
+    EV_ABS = 0x03
+    KEY_UP = 103
+    KEY_DOWN = 108
+    KEY_LEFT = 105
+    KEY_RIGHT = 106
+    BTN_DPAD_UP = 544
+    BTN_DPAD_DOWN = 545
+    BTN_DPAD_LEFT = 546
+    BTN_DPAD_RIGHT = 547
+    ABS_X = 0
+    ABS_Y = 1
+    ABS_HAT0X = 16
+    ABS_HAT0Y = 17
+
+    def __init__(self):
+        self.fds = []
+        self.poller = select.poll()
+        self._open_devices()
+
+    def _open_devices(self):
+        for path in sorted(glob.glob('/dev/input/event*')):
+            try:
+                fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+                self.fds.append((fd, path))
+                self.poller.register(fd, select.POLLIN)
+                print('EVDEV aberto:', path)
+            except Exception as exc:
+                print('EVDEV ignorado:', path, repr(exc))
+
+    def close(self):
+        for fd, _ in self.fds:
+            try:
+                self.poller.unregister(fd)
+            except Exception:
+                pass
+            try:
+                os.close(fd)
+            except Exception:
+                pass
+        self.fds = []
+
+    def _translate(self, typ, code, value):
+        if typ == self.EV_KEY:
+            if code in (self.BTN_DPAD_UP, self.KEY_UP): return 'DY+', value != 0
+            if code in (self.BTN_DPAD_DOWN, self.KEY_DOWN): return 'DY-', value != 0
+            if code in (self.BTN_DPAD_LEFT, self.KEY_LEFT): return 'DX-', value != 0
+            if code in (self.BTN_DPAD_RIGHT, self.KEY_RIGHT): return 'DX+', value != 0
+            # RG35XX H / input.py button codes
+            button_map = {304:'A',305:'B',306:'Y',307:'X',308:'L1',309:'R1',314:'L2',315:'R2',310:'SELECT',311:'START',312:'MENUF',114:'V+',115:'V-'}
+            if code in button_map: return button_map[code], value != 0
+        elif typ == self.EV_ABS:
+            if code in (self.ABS_HAT0X, self.ABS_X):
+                if value < 0: return 'DX-', True
+                if value > 0: return 'DX+', True
+            if code in (self.ABS_HAT0Y, self.ABS_Y):
+                if value < 0: return 'DY+', True
+                if value > 0: return 'DY-', True
+        return None, False
+
+    def read(self):
+        # Non-blocking: collect a small batch, return the first usable control.
+        events = self.poller.poll(0)
+        for fd, mask in events:
+            if not (mask & select.POLLIN):
+                continue
+            try:
+                while True:
+                    data = os.read(fd, 24)
+                    if len(data) != 24:
+                        break
+                    tv_sec, tv_usec, typ, code, value = struct.unpack('llHHI', data)
+                    # EV_ABS values arrive as unsigned in the old struct; normalize to signed int.
+                    if typ == self.EV_ABS and value >= 0x80000000:
+                        value -= 0x100000000
+                    name, pressed = self._translate(typ, code, value)
+                    if name:
+                        return name, (1 if pressed else -1), value
+            except BlockingIOError:
+                pass
+            except OSError as exc:
+                print('EVDEV leitura:', repr(exc))
+        return None, 0, 0
+
 
 class SDLInputBridge:
     """KNULLI input bridge.
@@ -49,6 +144,7 @@ class SDLInputBridge:
         self._controller_ready = False
         self._controller_index = -1
         self._controller_init()
+        self._evdev = MultiEvdevReader()
 
     def _controller_init(self):
         if sdl2 is None:
@@ -171,14 +267,15 @@ class SDLInputBridge:
         if self._poll_sdl():
             return
 
-        # Last-resort compatibility with the old raw Linux input reader.
+        # Fallback robusto: varre todos os /dev/input/event*, sem assumir event1.
         try:
-            import input as raw_input
-            raw_input.check()
-            self.codeName = raw_input.codeName
-            self.value = raw_input.value
+            name, value, raw_value = self._evdev.read()
+            if name:
+                self.codeName = name
+                self.value = value
+                print("INPUT:", name, value, "raw=", raw_value)
         except Exception as exc:
-            print("Raw input fallback failed:", repr(exc))
+            print("EVDEV fallback failed:", repr(exc))
 
     def key(self, keyCodeName, keyValue=99):
         if self.codeName == keyCodeName:
@@ -264,6 +361,10 @@ class SDLInputBridge:
                         p.kill()
             except Exception:
                 pass
+        try:
+            self._evdev.close()
+        except Exception:
+            pass
         if self._controller is not None and sdl2 is not None:
             try:
                 sdl2.SDL_GameControllerClose(self._controller)
@@ -295,7 +396,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.1.5"
+APP_VERSION = "v1.1.6"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
