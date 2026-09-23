@@ -42,7 +42,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.1.2"
+APP_VERSION = "v1.1.3"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -286,8 +286,8 @@ def draw_tabs(active):
     roms_outline = (0, 255, 120) if active == 1 else (100, 100, 100)
     ui.draw_rectangle([20, 68, 220, 105], outline=ports_outline)
     ui.draw_rectangle([230, 68, 430, 105], outline=roms_outline)
-    ui.draw_text((65, 76), "Ports")
-    ui.draw_text((280, 76), "ROMs")
+    ui.draw_text((65, 76), "[Ports]" if active == 0 else "Ports")
+    ui.draw_text((280, 76), "[ROMs]" if active == 1 else "ROMs")
 
 
 def draw_ports_menu():
