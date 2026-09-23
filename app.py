@@ -278,6 +278,20 @@ class SDLInputBridge:
             print("EVDEV fallback failed:", repr(exc))
 
     def key(self, keyCodeName, keyValue=99):
+        # Compatibilidade: o evdev traduz o D-pad para DX+/DX-/DY+/DY-,
+        # enquanto o restante do aplicativo consulta DX/DY com valor +/-1.
+        if keyCodeName == "DX":
+            if keyValue == 1:
+                return self.codeName == "DX+" and self.value == 1
+            if keyValue == -1:
+                return self.codeName == "DX-" and self.value == 1
+            return self.codeName in ("DX+", "DX-")
+        if keyCodeName == "DY":
+            if keyValue == 1:
+                return self.codeName == "DY+" and self.value == 1
+            if keyValue == -1:
+                return self.codeName == "DY-" and self.value == 1
+            return self.codeName in ("DY+", "DY-")
         if self.codeName == keyCodeName:
             return self.value == keyValue if keyValue != 99 else True
         return False
@@ -396,7 +410,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.1.6"
+APP_VERSION = "v1.1.7"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
