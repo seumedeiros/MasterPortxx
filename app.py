@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============================================================
-# MasterPortxx Downloader v1.2
+# MasterPortxx Downloader v1.3
 # RG35XX H / Knulli
 #
 # Compatível com a arquitetura gráfica já usada no app.py
@@ -14,7 +14,14 @@
 #   SERVER_URL/0001/MasterPortxx_0001.mpx
 #   ...
 #
-# A pasta "data/" do ZIP é extraída DIRETAMENTE em PORTS_DIR.
+# ROMs (Packer v1.4):
+#   GitHub/ROMs/index.json
+#   GitHub/ROMs/<sistema>/catalog.json
+#   GitHub/ROMs/<sistema>/0001/manifest.json
+#   GitHub/ROMs/<sistema>/0001/MasterPortxx_0001.mpx
+#
+# Ports extraem data/ diretamente em PORTS_DIR.
+# ROMs extraem data/ diretamente em /userdata/roms/<sistema>.
 # ============================================================
 
 import os
@@ -401,6 +408,7 @@ import hashlib
 import shutil
 import tempfile
 import sys
+from urllib.parse import quote
 from graphic import UserInterface
 
 ui = UserInterface()
@@ -417,10 +425,11 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.2"
+APP_VERSION = "v1.3"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/seumedeiros/MasterPortxx/main"
 ROMS_REMOTE_PATH = "ROMs"
 ROMS_LOCAL_BASE = "/userdata/roms"
 
@@ -700,8 +709,8 @@ def draw_rom_systems():
 
     if not rom_systems:
         ui.draw_text((40, 145), "Nenhum sistema encontrado.")
-        ui.draw_text((40, 185), "Crie pastas dentro de ROMs")
-        ui.draw_text((40, 215), "no GitHub.")
+        ui.draw_text((40, 185), "Publique ROMs/ com index.json")
+        ui.draw_text((40, 215), "e catalog.json por sistema.")
     else:
         visible = 5
         first = max(0, rom_system_selected - 2)
@@ -739,10 +748,11 @@ def draw_rom_files():
         y = 125
         for i in range(first, last):
             item = rom_files[i]
-            name = item["name"]
+            package_id = str(item.get("id", "0000")).zfill(4)
+            name = str(item.get("title", item.get("name", package_id)))
             if i == rom_file_selected:
                 ui.draw_rectangle([20, y - 6, ui.screen_width - 20, y + 28], outline=(0, 255, 120))
-            ui.draw_text((35, y), name[:34])
+            ui.draw_text((35, y), "%s - %s" % (package_id, name[:29]))
             y += 40
 
     ui.draw_text((20, ui.screen_height - 58), "A = Baixar ROM")
@@ -850,22 +860,54 @@ def github_api_json(path):
     return fetch_json(url)
 
 
+def github_raw_url(path):
+    """Monta uma URL raw segura, escapando cada componente do caminho."""
+    parts = [p for p in str(path).strip("/").split("/") if p]
+    return GITHUB_RAW_BASE + "/" + "/".join(quote(p, safe="") for p in parts)
+
+
 def load_rom_systems():
+    """Carrega os sistemas a partir de ROMs/index.json gerado pelo Packer v1.4.
+
+    Se o índice ainda não existir, usa a Contents API como fallback para
+    manter compatibilidade com a estrutura antiga de ROMs/.
+    """
     global rom_systems
+    try:
+        data = fetch_json(github_raw_url("ROMs/index.json"))
+        if isinstance(data, dict) and isinstance(data.get("systems"), list):
+            rom_systems = []
+            for item in data["systems"]:
+                if not isinstance(item, dict):
+                    continue
+                name = str(item.get("folder", "")).strip()
+                title = str(item.get("title", name)).strip() or name
+                if not name or name in (".", ".."): 
+                    continue
+                rom_systems.append({
+                    "name": title,
+                    "folder": name,
+                    "path": "ROMs/" + name,
+                    "package_count": int(item.get("package_count", 0) or 0)
+                })
+            rom_systems.sort(key=lambda x: x["name"].lower())
+            return True
+    except Exception:
+        pass
+
+    # Fallback para uma instalação que ainda tenha somente pastas no GitHub.
     try:
         data = github_api_json(ROMS_REMOTE_PATH)
         if not isinstance(data, list):
             return False
         rom_systems = []
         for item in data:
-            if not isinstance(item, dict):
-                continue
-            if item.get("type") != "dir":
+            if not isinstance(item, dict) or item.get("type") != "dir":
                 continue
             name = str(item.get("name", "")).strip()
             path = str(item.get("path", "")).strip("/")
             if name and path:
-                rom_systems.append({"name": name, "path": path})
+                rom_systems.append({"name": name, "folder": name, "path": path, "package_count": 0})
         rom_systems.sort(key=lambda x: x["name"].lower())
         return True
     except Exception:
@@ -873,76 +915,207 @@ def load_rom_systems():
 
 
 def load_rom_files(remote_path):
+    """Carrega os pacotes ROM de ROMs/<sistema>/catalog.json."""
     global rom_files
     try:
-        data = github_api_json(remote_path)
-        if not isinstance(data, list):
+        catalog_url = github_raw_url(str(remote_path).strip("/") + "/catalog.json")
+        data = fetch_json(catalog_url)
+        if not isinstance(data, dict) or not isinstance(data.get("packages"), list):
             return False
+
         rom_files = []
-        for item in data:
+        for item in data["packages"]:
             if not isinstance(item, dict):
                 continue
-            item_type = item.get("type")
-            if item_type != "file":
+            package_id = str(item.get("id", "")).zfill(4)
+            title = str(item.get("title", package_id)).strip() or package_id
+            if len(package_id) != 4 or not package_id.isdigit():
                 continue
-            name = str(item.get("name", "")).strip()
-            download_url = str(item.get("download_url", "")).strip()
-            path = str(item.get("path", "")).strip("/")
-            if name and download_url and path:
-                rom_files.append({"name": name, "path": path, "download_url": download_url})
+            rom_files.append({
+                "id": package_id,
+                "name": title,
+                "title": title,
+                "path": str(remote_path).strip("/") + "/" + package_id,
+                "type": "rom"
+            })
         rom_files.sort(key=lambda x: x["name"].lower())
         return True
     except Exception:
         return False
 
 
-def rom_destination(system_name, filename):
-    # O nome da pasta do GitHub é preservado no destino.
-    safe_system = os.path.basename(system_name.strip("/"))
-    safe_file = os.path.basename(filename)
+def rom_destination(system_name, relative_name):
+    """Retorna o destino final da ROM dentro de /userdata/roms/<sistema>."""
+    safe_system = os.path.basename(str(system_name).strip("/"))
     if not safe_system or safe_system in (".", ".."):
         raise RuntimeError("Nome de sistema inválido.")
-    if not safe_file or safe_file in (".", ".."):
-        raise RuntimeError("Nome de ROM inválido.")
-    return os.path.join(ROMS_LOCAL_BASE, safe_system, safe_file)
+
+    relative_name = str(relative_name).replace("\\", "/").lstrip("/")
+    if not relative_name or relative_name == "." or ".." in relative_name.split("/"):
+        raise RuntimeError("Caminho de ROM inválido.")
+
+    destination = os.path.realpath(os.path.join(ROMS_LOCAL_BASE, safe_system, relative_name))
+    base = os.path.realpath(os.path.join(ROMS_LOCAL_BASE, safe_system))
+    if destination != base and not destination.startswith(base + os.sep):
+        raise RuntimeError("Path traversal detectado.")
+    return destination
+
+
+def load_rom_manifest(system_folder, package_id, temp_dir):
+    package_id = str(package_id).zfill(4)
+    if len(package_id) != 4 or not package_id.isdigit():
+        raise RuntimeError("ID de ROM inválido: " + package_id)
+
+    url = github_raw_url(f"ROMs/{system_folder}/{package_id}/manifest.json")
+    path = os.path.join(temp_dir, "manifest.json")
+    if not wget_to_file(url, path):
+        raise RuntimeError("Não foi possível baixar o manifest da ROM.")
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+    except Exception as exc:
+        raise RuntimeError("Manifest da ROM inválido.") from exc
+
+    if manifest.get("format") != "MasterPortxx":
+        raise RuntimeError("Formato de pacote ROM inválido.")
+    if str(manifest.get("package_id", "")) != package_id:
+        raise RuntimeError("Package ID não corresponde à pasta.")
+    if str(manifest.get("package_type", manifest.get("type", ""))).lower() != "rom":
+        raise RuntimeError("O pacote não é do tipo ROM.")
+    if str(manifest.get("system_folder", "")) != str(system_folder):
+        raise RuntimeError("O sistema do manifesto não corresponde à pasta.")
+
+    parts = manifest.get("parts", [])
+    total_parts = int(manifest.get("total_parts", len(parts)))
+    if not parts or len(parts) != total_parts:
+        raise RuntimeError("Quantidade de partes da ROM inconsistente.")
+    if int(manifest.get("part_size_bytes", 0)) != 25 * 1024 * 1024:
+        raise RuntimeError("A ROM não está usando partes de 25 MB.")
+    return manifest
 
 
 def download_rom(item):
+    """Baixa, verifica, reconstrói e instala um pacote ROM v1.4."""
     if not rom_system_path:
         raise RuntimeError("Nenhum sistema selecionado.")
 
-    system_name = rom_system_path.split("/")[-1]
-    filename = item["name"]
-    destination = rom_destination(system_name, filename)
-    destination_dir = os.path.dirname(destination)
-    os.makedirs(destination_dir, exist_ok=True)
-    # O temporário fica junto da ROM para evitar EXDEV entre /tmp e /userdata.
-    temp_path = os.path.join(destination_dir, ".masterportxx_rom_%d.tmp" % os.getpid())
+    system_folder = rom_system_path.split("/")[-1]
+    package_id = str(item.get("id", "")).zfill(4)
+    title = str(item.get("title", item.get("name", package_id)))
+    temp_dir = tempfile.mkdtemp(prefix="masterportxx_rom_")
 
     try:
-        show_status("BAIXANDO ROM", [system_name, "", filename, "", "GitHub..."])
-        if not download_raw_file(item["download_url"], temp_path):
-            raise RuntimeError("Não foi possível baixar a ROM.")
+        show_status("PREPARANDO ROM", [system_folder, title, "", "Baixando manifesto..."])
+        manifest = load_rom_manifest(system_folder, package_id, temp_dir)
+        parts = sorted(manifest["parts"], key=lambda p: int(p["index"]))
+        zip_path = os.path.join(temp_dir, "payload.zip")
 
-        os.makedirs(os.path.dirname(destination), exist_ok=True)
+        with open(zip_path, "wb") as final_zip:
+            for position, part in enumerate(parts, 1):
+                filename = str(part.get("file", ""))
+                if not filename or "/" in filename or "\\" in filename or filename in (".", ".."):
+                    raise RuntimeError("Nome de parte inválido.")
 
-        if os.path.exists(destination):
-            show_status("ROM EXISTENTE", [filename, "", "A = Sobrescrever", "B = Cancelar"])
-            while True:
-                input.check()
-                if input.key("B"):
-                    return "cancelado"
-                if input.key("A"):
-                    break
+                expected_size = int(part["size_bytes"])
+                expected_hash = str(part["sha256"]).lower()
+                part_path = os.path.join(temp_dir, filename)
 
-        os.replace(temp_path, destination)
+                show_status("BAIXANDO ROM", [
+                    system_folder, title, "",
+                    "Parte %d/%d" % (position, len(parts)),
+                    filename,
+                    "25 MB" if position < len(parts) else "Última parte"
+                ])
+
+                url = github_raw_url(f"ROMs/{system_folder}/{package_id}/{filename}")
+                if not wget_to_file(url, part_path):
+                    raise RuntimeError("Falha ao baixar " + filename)
+                if os.path.getsize(part_path) != expected_size:
+                    raise RuntimeError("Tamanho incorreto em " + filename)
+
+                show_status("VERIFICANDO ROM", [
+                    title, "",
+                    "Parte %d/%d" % (position, len(parts)),
+                    "SHA-256..."
+                ])
+                if sha256_file(part_path).lower() != expected_hash:
+                    raise RuntimeError("SHA-256 inválido em " + filename)
+
+                with open(part_path, "rb") as pf:
+                    shutil.copyfileobj(pf, final_zip, length=1024 * 1024)
+                try:
+                    os.remove(part_path)
+                except Exception:
+                    pass
+
+        expected_zip_size = int(manifest["zip_size_bytes"])
+        if os.path.getsize(zip_path) != expected_zip_size:
+            raise RuntimeError("Tamanho final do ZIP da ROM incorreto.")
+
+        show_status("TESTANDO ROM", [title, "", "Verificando integridade do ZIP..."])
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            bad = zf.testzip()
+            if bad:
+                raise RuntimeError("ZIP corrompido: " + bad)
+
+            names = zf.namelist()
+            members = [n for n in names if n == "data/" or n.startswith("data/")]
+            if not members:
+                raise RuntimeError("Pacote ROM sem pasta data/.")
+
+            destination_base = os.path.realpath(os.path.join(ROMS_LOCAL_BASE, system_folder))
+            os.makedirs(destination_base, exist_ok=True)
+            conflicts = []
+
+            for name in members:
+                relative = name[5:]
+                if not relative:
+                    continue
+                target = os.path.realpath(os.path.join(destination_base, relative))
+                if target != destination_base and not target.startswith(destination_base + os.sep):
+                    raise RuntimeError("Path traversal detectado na ROM.")
+                if os.path.exists(target):
+                    conflicts.append(relative)
+
+            if conflicts:
+                show_status("ROM EXISTENTE", [
+                    title, "",
+                    "%d arquivo(s) já existem." % len(conflicts),
+                    "", "A = Sobrescrever", "B = Cancelar"
+                ])
+                while True:
+                    input.check()
+                    if input.key("B"):
+                        return "cancelado"
+                    if input.key("A"):
+                        break
+
+            show_status("INSTALANDO ROM", [
+                title, "",
+                "Sistema:", system_folder,
+                "Destino:", destination_base
+            ])
+
+            for name in members:
+                relative = name[5:]
+                if not relative:
+                    continue
+                target = os.path.realpath(os.path.join(destination_base, relative))
+                if target != destination_base and not target.startswith(destination_base + os.sep):
+                    raise RuntimeError("Path traversal detectado na ROM.")
+                if name.endswith("/"):
+                    os.makedirs(target, exist_ok=True)
+                    continue
+                parent = os.path.dirname(target)
+                if parent:
+                    os.makedirs(parent, exist_ok=True)
+                with zf.open(name, "r") as src_file, open(target, "wb") as dst_file:
+                    shutil.copyfileobj(src_file, dst_file, length=1024 * 1024)
+
         return "ok"
     finally:
-        try:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-        except Exception:
-            pass
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # ============================================================
@@ -1378,7 +1551,7 @@ def main():
                 rom_system_path = rom_systems[rom_system_selected]["path"]
                 rom_file_selected = 0
                 if not load_rom_files(rom_system_path):
-                    wait_message("ERRO", ["Não foi possível carregar", rom_system_path, "", "A/B = Voltar"])
+                    wait_message("ERRO", ["Não foi possível carregar", rom_system_path, "catalog.json", "A/B = Voltar"])
                     rom_system_path = ""
 
         else:
@@ -1393,8 +1566,10 @@ def main():
                     if result == "cancelado":
                         continue
                     wait_message("ROM INSTALADA", [
-                        item["name"], "", "Sistema:", rom_system_path.split("/")[-1],
-                        "", "Destino:", ROMS_LOCAL_BASE, "", "A/B = Voltar"
+                        item.get("title", item.get("name", item.get("id", "ROM"))), "",
+                        "Sistema:", rom_system_path.split("/")[-1],
+                        "", "Destino:", os.path.join(ROMS_LOCAL_BASE, rom_system_path.split("/")[-1]),
+                        "", "A/B = Voltar"
                     ])
                 except Exception as e:
                     wait_message("ERRO", [item["name"], "", str(e), "", "A/B = Voltar"])
