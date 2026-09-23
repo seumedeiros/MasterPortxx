@@ -42,7 +42,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.1.1"
+APP_VERSION = "v1.1.2"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -376,6 +376,10 @@ def draw_rom_files():
 
 
 def draw_menu():
+    # Limpa o frame antes de redesenhar para evitar que textos
+    # do estado anterior fiquem sobrepostos ao menu atual.
+    ui.draw_start()
+
     if section == 0:
         draw_ports_menu()
     elif section == 1 and rom_system_path:
