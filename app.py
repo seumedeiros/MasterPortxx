@@ -42,7 +42,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.1"
+APP_VERSION = "v1.1.1"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -121,9 +121,12 @@ def download_raw_file(url, destination):
 
 def update_app():
     """Baixa um novo app.py, valida, cria app.bkp e substitui atomicamente."""
+    # O temporário precisa ficar no mesmo filesystem do app.
+    # No RG35XX H/Knulli, /tmp e /userdata podem estar em filesystems
+    # diferentes, o que faz os.replace() falhar com EXDEV.
     temp_path = os.path.join(
-        tempfile.gettempdir(),
-        "masterportxx_app_update_%d.py" % os.getpid()
+        APP_DIR,
+        ".masterportxx_app_update_%d.py" % os.getpid()
     )
 
     try:
@@ -241,7 +244,8 @@ def restore_app_backup():
             return
         if input.key("A"):
             try:
-                restore_temp = os.path.join(tempfile.gettempdir(), "masterportxx_restore_%d.py" % os.getpid())
+                # Também mantemos o temporário no mesmo filesystem do app.
+                restore_temp = os.path.join(APP_DIR, ".masterportxx_restore_%d.py" % os.getpid())
                 shutil.copy2(APP_BACKUP_PATH, restore_temp)
                 import py_compile
                 py_compile.compile(restore_temp, doraise=True)
@@ -531,7 +535,10 @@ def download_rom(item):
     system_name = rom_system_path.split("/")[-1]
     filename = item["name"]
     destination = rom_destination(system_name, filename)
-    temp_path = os.path.join(tempfile.gettempdir(), "masterportxx_rom_%d.tmp" % os.getpid())
+    destination_dir = os.path.dirname(destination)
+    os.makedirs(destination_dir, exist_ok=True)
+    # O temporário fica junto da ROM para evitar EXDEV entre /tmp e /userdata.
+    temp_path = os.path.join(destination_dir, ".masterportxx_rom_%d.tmp" % os.getpid())
 
     try:
         show_status("BAIXANDO ROM", [system_name, "", filename, "", "GitHub..."])
