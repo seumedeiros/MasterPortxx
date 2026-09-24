@@ -106,6 +106,17 @@ class MultiEvdevReader:
                 if value > 0: return 'DY-', True
         return None, False
 
+    def drain(self):
+        """Esvazia eventos pendentes dos dispositivos sem processá-los."""
+        for fd, _ in self.fds:
+            try:
+                while True:
+                    data = os.read(fd, 24)
+                    if len(data) != 24:
+                        break
+            except (BlockingIOError, OSError):
+                pass
+
     def read(self):
         # Non-blocking: collect a small batch, return the first usable control.
         events = self.poller.poll(0)
@@ -150,6 +161,7 @@ class SDLInputBridge:
         self._controller = None
         self._controller_ready = False
         self._controller_index = -1
+        self.held_buttons = set()
         self._controller_init()
         self._evdev = MultiEvdevReader()
 
@@ -235,38 +247,77 @@ class SDLInputBridge:
             if ev.type == sdl2.SDL_KEYDOWN:
                 name = self._key_name(ev.key.keysym.sym)
                 if name:
-                    self.codeName = name
-                    self.value = 1
+                    self._set_event(name, 1)
                     return True
             elif ev.type == getattr(sdl2, "SDL_KEYUP", 769):
                 name = self._key_name(ev.key.keysym.sym)
                 if name:
-                    self.codeName = name
-                    self.value = -1
+                    self._set_event(name, -1)
                     return True
             elif ev.type == getattr(sdl2, "SDL_CONTROLLERBUTTONDOWN", 1617):
                 name = self._controller_button_name(ev.cbutton.button)
                 if name:
-                    self.codeName = name
-                    self.value = 1
+                    self._set_event(name, 1)
                     return True
             elif ev.type == getattr(sdl2, "SDL_CONTROLLERBUTTONUP", 1618):
                 name = self._controller_button_name(ev.cbutton.button)
                 if name:
-                    self.codeName = name
-                    self.value = -1
+                    self._set_event(name, -1)
                     return True
             elif ev.type == getattr(sdl2, "SDL_CONTROLLERAXISMOTION", 1616):
                 name = self._axis_to_name(ev.caxis.axis, ev.caxis.value)
                 if name:
-                    self.codeName = name
-                    self.value = 1
+                    self._set_event(name, 1)
                     return True
             elif ev.type == sdl2.SDL_QUIT:
-                self.codeName = "B"
-                self.value = 1
+                self._set_event("B", 1)
                 return True
         return found
+
+    def _set_event(self, name, value):
+        self.codeName = name or ""
+        self.value = value or 0
+
+        if name:
+            if value == 1:
+                self.held_buttons.add(name)
+            elif value == -1:
+                self.held_buttons.discard(name)
+
+    def is_held(self, name):
+        return name in self.held_buttons
+
+    def discard_pending(self):
+        """Descarta eventos já enfileirados sem criar novas ações no menu."""
+        try:
+            self._evdev.drain()
+        except Exception:
+            pass
+
+        if sdl2 is not None:
+            try:
+                ev = sdl2.SDL_Event()
+                while sdl2.SDL_PollEvent(ctypes.byref(ev)):
+                    pass
+            except Exception:
+                pass
+
+        self.codeName = ""
+        self.value = 0
+
+    def wait_button_release(self, name):
+        """Espera a soltura de A/B antes de aceitar outro comando."""
+        import time
+        if not self.is_held(name):
+            return
+
+        while self.is_held(name):
+            self.check()
+            if not self.codeName:
+                time.sleep(0.01)
+
+        self.codeName = ""
+        self.value = 0
 
     def check(self):
         self.codeName = ""
@@ -279,8 +330,7 @@ class SDLInputBridge:
         try:
             name, value, raw_value = self._evdev.read()
             if name:
-                self.codeName = name
-                self.value = value
+                self._set_event(name, value)
                 print("INPUT:", name, value, "raw=", raw_value)
                 return
         except Exception as exc:
@@ -425,7 +475,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.3"
+APP_VERSION = "v1.3.1"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -789,11 +839,24 @@ def show_status(title, lines):
     ui.draw_paint()
 
 
-def wait_message(title, lines):
+def wait_message(title, lines, release_buttons=("A", "B")):
     show_status(title, lines)
+
+    # Primeiro espera a soltura dos botões que possam ainda estar pressionados.
+    # Isso permite que o evento de RELEASE seja lido e atualize o estado interno.
+    for button in release_buttons:
+        input.wait_button_release(button)
+
+    # Só depois disso descartamos eventos antigos que possam ter ficado na fila
+    # durante o download. Eles não podem virar uma nova escolha.
+    input.discard_pending()
+
     while True:
         input.check()
         if input.key("A") or input.key("B"):
+            input.wait_button_release("A")
+            input.wait_button_release("B")
+            input.discard_pending()
             return
 
 
@@ -1503,6 +1566,8 @@ def main():
                 rom_system_path = ""
                 rom_files.clear()
                 rom_file_selected = 0
+                input.wait_button_release("B")
+                input.discard_pending()
                 continue
             break
 
@@ -1553,6 +1618,12 @@ def main():
                 if not load_rom_files(rom_system_path):
                     wait_message("ERRO", ["Não foi possível carregar", rom_system_path, "catalog.json", "A/B = Voltar"])
                     rom_system_path = ""
+                else:
+                    # O A usado para abrir o sistema não pode ser reutilizado
+                    # para iniciar o primeiro jogo. Primeiro aguardamos a soltura,
+                    # depois descartamos qualquer repetição que tenha ficado na fila.
+                    input.wait_button_release("A")
+                    input.discard_pending()
 
         else:
             if input.key("DY", 1) and rom_files:
@@ -1569,7 +1640,7 @@ def main():
                         item.get("title", item.get("name", item.get("id", "ROM"))), "",
                         "Sistema:", rom_system_path.split("/")[-1],
                         "", "Destino:", os.path.join(ROMS_LOCAL_BASE, rom_system_path.split("/")[-1]),
-                        "", "A/B = Voltar"
+                        "", "A = Continuar    B = Voltar"
                     ])
                 except Exception as e:
                     wait_message("ERRO", [item["name"], "", str(e), "", "A/B = Voltar"])
