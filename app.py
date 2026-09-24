@@ -63,14 +63,13 @@ class MultiEvdevReader:
 
     def __init__(self):
         self.fds = []
+        self.fd_paths = {}
         self.poller = select.poll()
         # Estado por eixo + filtro de duplicação entre evdev/SDL/GPTOKEYB.
         self._axis_state = {"DX": 0, "DY": 0}
         self._last_dpad = None
         self._last_dpad_time = 0.0
         self._dpad_lock_until = 0.0
-        self._dpad_pressed = set()
-        self._dpad_sources = {}
         self._open_devices()
 
     def _open_devices(self):
@@ -78,8 +77,16 @@ class MultiEvdevReader:
             try:
                 fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
                 self.fds.append((fd, path))
+                self.fd_paths[fd] = path
                 self.poller.register(fd, select.POLLIN)
-                print('EVDEV aberto:', path)
+                devname = 'desconhecido'
+                try:
+                    name_path = '/sys/class/input/' + os.path.basename(path) + '/device/name'
+                    with open(name_path, 'r', encoding='utf-8', errors='ignore') as nf:
+                        devname = nf.read().strip()
+                except Exception:
+                    pass
+                print('EVDEV aberto:', path, '| NAME:', devname)
             except Exception as exc:
                 print('EVDEV ignorado:', path, repr(exc))
 
@@ -143,6 +150,14 @@ class MultiEvdevReader:
                         break
                     tv_sec, tv_usec, typ, code, value = struct.unpack('llHHI', data)
 
+                    if typ == 0 and code == 0:
+                        print('RAW_SYN_REPORT:', 'path=' + self.fd_paths.get(fd, str(fd)))
+
+                    # DIAGNOSTICO v1.3.9: registra os eventos físicos relevantes.
+                    # Não altera o evento nem o comportamento do D-pad.
+                    if (typ == self.EV_KEY and code in (self.BTN_DPAD_UP, self.BTN_DPAD_DOWN, self.BTN_DPAD_LEFT, self.BTN_DPAD_RIGHT, self.KEY_UP, self.KEY_DOWN, self.KEY_LEFT, self.KEY_RIGHT)) or (typ == self.EV_ABS and code in (self.ABS_HAT0X, self.ABS_HAT0Y, self.ABS_X, self.ABS_Y)):
+                        print('RAW_DPAD:', 'path=' + self.fd_paths.get(fd, str(fd)), 'type=' + str(typ), 'code=' + str(code), 'value=' + str(value))
+
                     # EV_KEY: 0 = release, 1 = press, 2 = autorepeat.
                     # O v1.3.2 transformava o autorepeat (2) em novo comando
                     # de navegação. No RG35XX H isso podia deixar eventos de
@@ -156,78 +171,81 @@ class MultiEvdevReader:
                     if typ == self.EV_ABS and value >= 0x80000000:
                         value -= 0x100000000
 
-                    # D-PAD POR PRESSAO/SOLTURA, SEM TEMPORIZADOR.
-                    # Um toque deve gerar exatamente uma acao. Se o mesmo
-                    # toque aparecer em mais de um event*, as fontes extras
-                    # entram no mesmo estado logico e nao geram outro passo.
-                    # A acao so fica novamente liberada quando todas as fontes
-                    # daquela direcao forem soltas.
-                    dpad_direction = None
-                    dpad_source = path
-                    if typ == self.EV_KEY and code in (
-                        self.BTN_DPAD_UP, self.BTN_DPAD_DOWN,
-                        self.BTN_DPAD_LEFT, self.BTN_DPAD_RIGHT,
-                        self.KEY_UP, self.KEY_DOWN, self.KEY_LEFT, self.KEY_RIGHT):
-                        dmap = {
-                            self.BTN_DPAD_UP: "DY+", self.KEY_UP: "DY+",
-                            self.BTN_DPAD_DOWN: "DY-", self.KEY_DOWN: "DY-",
-                            self.BTN_DPAD_LEFT: "DX-", self.KEY_LEFT: "DX-",
-                            self.BTN_DPAD_RIGHT: "DX+", self.KEY_RIGHT: "DX+",
-                        }
-                        dpad_direction = dmap[code]
-                        source_key = (dpad_source, code)
-                        sources = self._dpad_sources.setdefault(dpad_direction, set())
+                    # BLOQUEIO GLOBAL DO D-PAD:
+                    # um toque físico deve gerar somente UM movimento.
+                    # Isso também elimina duplicação entre vários /dev/input/event*.
+                    import time
+                    now = time.monotonic()
+                    if typ == self.EV_KEY and code in (self.BTN_DPAD_UP, self.BTN_DPAD_DOWN, self.BTN_DPAD_LEFT, self.BTN_DPAD_RIGHT, self.KEY_UP, self.KEY_DOWN, self.KEY_LEFT, self.KEY_RIGHT):
                         if value == 0:
-                            sources.discard(source_key)
-                            if not sources:
-                                self._dpad_sources.pop(dpad_direction, None)
+                            # soltura apenas encerra o bloqueio após uma pequena
+                            # janela, evitando que outro evento da mesma pressão
+                            # seja interpretado como novo toque.
+                            if now >= self._dpad_lock_until:
+                                self._dpad_lock_until = now
                             continue
                         if value == 2:
                             continue
-                        if source_key in sources:
+                        if now < self._dpad_lock_until:
                             continue
-                        first_source = not sources
-                        sources.add(source_key)
-                        if not first_source:
-                            continue
+                        self._dpad_lock_until = now + 0.28
                     elif typ == self.EV_ABS and code in (self.ABS_HAT0X, self.ABS_HAT0Y):
-                        axis_name = "DX" if code == self.ABS_HAT0X else "DY"
                         if value == 0:
-                            # Libera somente esta fonte/eixo.
-                            for direction in ("DX+", "DX-", "DY+", "DY-"):
-                                sources = self._dpad_sources.get(direction)
-                                if sources:
-                                    sources = {x for x in sources if x[0] != dpad_source or x[1] != code}
-                                    if sources:
-                                        self._dpad_sources[direction] = sources
-                                    else:
-                                        self._dpad_sources.pop(direction, None)
-                            self._axis_state[axis_name] = 0
                             continue
-                        direction = 1 if value > 0 else -1
-                        dpad_direction = ("DX+" if direction > 0 else "DX-") if axis_name == "DX" else ("DY-" if direction > 0 else "DY+")
-                        source_key = (dpad_source, code)
-                        sources = self._dpad_sources.setdefault(dpad_direction, set())
-                        # Mudanca direta de direcao na mesma fonte: libera a anterior.
-                        old = self._axis_state[axis_name]
-                        if old and old != direction:
-                            old_name = (("DX+" if old > 0 else "DX-") if axis_name == "DX" else ("DY-" if old > 0 else "DY+"))
-                            old_sources = self._dpad_sources.get(old_name, set())
-                            old_sources.discard(source_key)
-                            if old_sources:
-                                self._dpad_sources[old_name] = old_sources
-                            else:
-                                self._dpad_sources.pop(old_name, None)
-                        self._axis_state[axis_name] = direction
-                        if source_key in sources:
+                        if now < self._dpad_lock_until:
                             continue
-                        first_source = not sources
-                        sources.add(source_key)
-                        if not first_source:
-                            continue
+                        self._dpad_lock_until = now + 0.28
+
+                    # Eixos: só gera um comando quando entra em uma direção.
+                    # Enquanto o eixo estiver naquela direção, e principalmente
+                    # enquanto volta fisicamente para o centro, não gera novos
+                    # comandos. Isso elimina o efeito "After Burner" relatado
+                    # pelo usuário, em que ao soltar o D-pad a seleção voltava
+                    # várias casas até o primeiro item.
+                    if typ == self.EV_ABS:
+                        axis_name = None
+                        direction = 0
+                        if code == self.ABS_HAT0X:
+                            axis_name = "DX"
+                            if value < 0: direction = -1
+                            elif value > 0: direction = 1
+                        elif code == self.ABS_HAT0Y:
+                            axis_name = "DY"
+                            if value < 0: direction = -1
+                            elif value > 0: direction = 1
+
+                        if axis_name is not None:
+                            previous = self._axis_state[axis_name]
+                            self._axis_state[axis_name] = direction
+                            if direction == 0:
+                                continue
+                            if direction == previous:
+                                continue
+
+                            # Um toque físico deve gerar EXATAMENTE um passo.
+                            # No RG35XX H o mesmo D-pad pode aparecer em mais
+                            # de um /dev/input/event* (inclusive via GPTOKEYB),
+                            # portanto um único toque pode chegar duplicado.
+                            # Ignoramos duplicatas muito próximas.
+                            import time
+                            now = time.monotonic()
+                            dpad_key = (axis_name, direction)
+                            if (self._last_dpad == dpad_key and
+                                    now - self._last_dpad_time < 0.18):
+                                continue
+                            self._last_dpad = dpad_key
+                            self._last_dpad_time = now
 
                     name, pressed = self._translate(typ, code, value)
                     if name:
+                        if name in ("DX+", "DX-", "DY+", "DY-") and value != 0:
+                            import time
+                            now = time.monotonic()
+                            if (self._last_dpad == name and
+                                    now - self._last_dpad_time < 0.18):
+                                continue
+                            self._last_dpad = name
+                            self._last_dpad_time = now
                         return name, (1 if pressed else -1), value
             except BlockingIOError:
                 pass
@@ -464,6 +482,9 @@ class SDLInputBridge:
             if name:
                 self._set_event(name, value)
                 print("INPUT:", name, value, "raw=", raw_value)
+                if name in ("DX+", "DX-", "DY+", "DY-") and value == 1:
+                    # Descarta o restante do pacote/burst do mesmo toque.
+                    self._evdev.drain()
                 return
         except Exception as exc:
             print("EVDEV read failed:", repr(exc))
@@ -613,7 +634,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.3.8"
+APP_VERSION = "v1.3.9 DIAGNOSTICO"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
