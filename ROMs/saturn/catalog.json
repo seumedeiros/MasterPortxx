@@ -1,0 +1,13 @@
+{
+  "format": "MasterPortxx",
+  "format_version": 1,
+  "system": "saturn",
+  "packages": [
+    {
+      "id": "0001",
+      "title": "Bulk Slash (English v1.001)[Undub].chd",
+      "type": "rom"
+    }
+  ],
+  "updated_at": "2026-09-23T23:47:52"
+}

@@ -1,0 +1,8 @@
+MASTERPORTXX PACKAGE
+Format: MasterPortxx
+Version: 1
+Package ID: 0001
+System: saturn
+Original name: Bulk Slash (English v1.001)[Undub].chd
+Parts: 4
+ZIP size: 87890224

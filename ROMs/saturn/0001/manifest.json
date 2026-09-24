@@ -1,0 +1,46 @@
+{
+  "format": "MasterPortxx",
+  "format_version": 1,
+  "packer_version": "1.4",
+  "package_id": "0001",
+  "original_name": "Bulk Slash (English v1.001)[Undub].chd",
+  "compression": "zip",
+  "part_size_bytes": 26214400,
+  "source_size_bytes": 87922499,
+  "file_count": 1,
+  "payload": "payload.zip",
+  "package_type": "rom",
+  "parts": [
+    {
+      "index": 1,
+      "file": "MasterPortxx_0001.mpx",
+      "size_bytes": 26214400,
+      "sha256": "8cfd8131765b7b0cec3ddd226a8593aae6c37cd3db22a84a6a866d640c312fc5"
+    },
+    {
+      "index": 2,
+      "file": "MasterPortxx_0002.mpx",
+      "size_bytes": 26214400,
+      "sha256": "c7ea262a7f707b9538fe30705ed5feff8f2dbfa607d96fa605421a814a40ac98"
+    },
+    {
+      "index": 3,
+      "file": "MasterPortxx_0003.mpx",
+      "size_bytes": 26214400,
+      "sha256": "fccf87ae82075bd1c11a84f8a3a5488053873fae4ce28b79f678e1595d7d42d7"
+    },
+    {
+      "index": 4,
+      "file": "MasterPortxx_0004.mpx",
+      "size_bytes": 9247024,
+      "sha256": "76a539da64552f3cf7401b2e892fcfa4cd54a2ea8b38c39b9c6e05469fa71c15"
+    }
+  ],
+  "type": "rom",
+  "system_folder": "saturn",
+  "destination": "/userdata/roms/saturn",
+  "rom_name": "Bulk Slash (English v1.001)[Undub].chd",
+  "zip_size_bytes": 87890224,
+  "total_parts": 4,
+  "created_at": "2026-09-23T23:47:52"
+}
