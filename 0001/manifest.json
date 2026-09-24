@@ -1,47 +1,58 @@
 {
   "format": "MasterPortxx",
   "format_version": 1,
-  "packer_version": "1.3",
+  "packer_version": "1.5",
   "package_id": "0001",
-  "original_name": "Limbo1",
+  "original_name": "Limbo",
   "compression": "zip",
   "part_size_bytes": 26214400,
-  "source_size_bytes": 134462848,
-  "file_count": 47,
+  "source_size_bytes": 134602282,
+  "file_count": 48,
   "payload": "payload.zip",
+  "package_type": "port",
   "parts": [
     {
       "index": 1,
       "file": "MasterPortxx_0001.mpx",
       "size_bytes": 26214400,
-      "sha256": "c1995dbca54834598514c102f0d46eef6069442f1f5e998ba4491f0c32c940e0"
+      "sha256": "87178f46c8a1a9deb2b4a07c48f18875f107ad988f2480d0198c6cc3253002da"
     },
     {
       "index": 2,
       "file": "MasterPortxx_0002.mpx",
       "size_bytes": 26214400,
-      "sha256": "05d1cca9ac9e0b72b91a0d2f75736ad72835c636a8eddb3be8bf680769427151"
+      "sha256": "80bed12b806abf4084c652d411544616cfe0ce3ccf623392220db7724bc977ec"
     },
     {
       "index": 3,
       "file": "MasterPortxx_0003.mpx",
       "size_bytes": 26214400,
-      "sha256": "b011dff61b57bb7293f065e7a07b6f711ece2ed79be900b9bf621c5eb6822d62"
+      "sha256": "3e456be1a702accf62fd9dacfa4552748732de4b388ebcc4e39a9e973faa105f"
     },
     {
       "index": 4,
       "file": "MasterPortxx_0004.mpx",
       "size_bytes": 26214400,
-      "sha256": "60ace16dd91e6040d3f62a947a4ceb7cd26b8bfe80c154a9cec4376cc23ef85f"
+      "sha256": "5f86a6d97e30252c7ed8e61a927f7a99eea2cc756a70c0bb9339662b8da4ce49"
     },
     {
       "index": 5,
       "file": "MasterPortxx_0005.mpx",
-      "size_bytes": 228298,
-      "sha256": "2d32172f743fd414add20537ce651f49e6d0a968a424cd75a2162df324745094"
+      "size_bytes": 367884,
+      "sha256": "1879743cbe6b31189ca8175aebd946de5e7c426f35127e9f6f6a74acee4546ad"
     }
   ],
-  "zip_size_bytes": 105085898,
+  "type": "port",
+  "destination": "/userdata/roms/ports",
+  "port_script": "Limbo.sh",
+  "port_name": "Limbo",
+  "port_data_dir": "limbo",
+  "gamelist": {
+    "path": "./Limbo.sh",
+    "name": "Limbo",
+    "image": "./limbo/cover.png"
+  },
+  "zip_size_bytes": 105225484,
   "total_parts": 5,
-  "created_at": "2026-09-22T18:45:26"
+  "created_at": "2026-09-24T07:20:43"
 }
