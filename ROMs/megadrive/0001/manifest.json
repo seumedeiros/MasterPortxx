@@ -14,8 +14,8 @@
     {
       "index": 1,
       "file": "MasterPortxx_0001.mpx",
-      "size_bytes": 714730,
-      "sha256": "9b3e500cb97440316a434a3602d2a3b08868936fa8fe9c94d2dd9e2385ba070c"
+      "size_bytes": 890811,
+      "sha256": "7e20169b7f4bce841b564d769892d9d5f07e6d0eee10b7f1e78b6cc9d37e3a07"
     }
   ],
   "type": "rom",
@@ -32,9 +32,9 @@
   "media": {
     "image": null,
     "marquee": null,
-    "thumbnail": null
+    "thumbnail": "Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese)-thumb.png"
   },
-  "zip_size_bytes": 714730,
+  "zip_size_bytes": 890811,
   "total_parts": 1,
-  "created_at": "2026-09-24T08:53:27"
+  "created_at": "2026-09-24T09:20:19"
 }
