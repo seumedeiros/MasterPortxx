@@ -1,7 +1,7 @@
 {
   "format": "MasterPortxx",
   "format_version": 1,
-  "packer_version": "1.5",
+  "packer_version": "1.5.2",
   "package_id": "0002",
   "original_name": "Project A-51 110926.zip",
   "compression": "zip",
@@ -14,27 +14,23 @@
     {
       "index": 1,
       "file": "MasterPortxx_0001.mpx",
-      "size_bytes": 1299583,
-      "sha256": "2602752a157bb01f425b12430f8a0a2e99fbcd9cbe2805c3a9426e2743727282"
+      "size_bytes": 1299558,
+      "sha256": "f45056b374249d95f8253ec6f098d3f0c1db46b13b2a9e5b39128e63cf76e891"
     }
   ],
   "type": "rom",
   "system_folder": "megadrive",
   "destination": "/userdata/roms/megadrive",
   "rom_name": "Project A-51 110926.zip",
-  "gamelist": {
-    "path": "./Project A-51 110926.zip",
-    "name": "Project A-51 110926",
-    "image": "./images/Project A-51 110926-image.png",
-    "marquee": "./images/Project A-51 110926-marquee.png",
-    "thumbnail": "./images/Project A-51 110926-thumb.png"
-  },
   "media": {
-    "image": null,
+    "image": "./images/Project A-51 110926-image.png",
     "marquee": null,
-    "thumbnail": "Project A-51 110926-thumb.png"
+    "thumbnail": null
   },
-  "zip_size_bytes": 1299583,
+  "image": "./images/Project A-51 110926-image.png",
+  "marquee": null,
+  "thumbnail": null,
+  "zip_size_bytes": 1299558,
   "total_parts": 1,
-  "created_at": "2026-09-24T09:20:20"
+  "created_at": "2026-09-24T09:41:39"
 }

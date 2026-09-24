@@ -1,7 +1,7 @@
 {
   "format": "MasterPortxx",
   "format_version": 1,
-  "packer_version": "1.5",
+  "packer_version": "1.5.2",
   "package_id": "0003",
   "original_name": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0).zip",
   "compression": "zip",
@@ -14,27 +14,23 @@
     {
       "index": 1,
       "file": "MasterPortxx_0001.mpx",
-      "size_bytes": 3875818,
-      "sha256": "9cfb2bd90350068c9b7d4ae5e4477775bb7639879218e301eb0f812dabaa296d"
+      "size_bytes": 3875789,
+      "sha256": "65b6dfc19aaff18a7075e861fa51809ba664020c304478f526ed69d36e96d08f"
     }
   ],
   "type": "rom",
   "system_folder": "megadrive",
   "destination": "/userdata/roms/megadrive",
   "rom_name": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0).zip",
-  "gamelist": {
-    "path": "./Real Bout Fatal Fury Genesis (Homebrew vLite2.0).zip",
-    "name": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0)",
-    "image": "./images/Real Bout Fatal Fury Genesis (Homebrew vLite2.0)-image.png",
-    "marquee": "./images/Real Bout Fatal Fury Genesis (Homebrew vLite2.0)-marquee.png",
-    "thumbnail": "./images/Real Bout Fatal Fury Genesis (Homebrew vLite2.0)-thumb.png"
-  },
   "media": {
-    "image": null,
+    "image": "./images/Real Bout Fatal Fury Genesis (Homebrew vLite2.0)-image.png",
     "marquee": null,
-    "thumbnail": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0)-thumb.png"
+    "thumbnail": null
   },
-  "zip_size_bytes": 3875818,
+  "image": "./images/Real Bout Fatal Fury Genesis (Homebrew vLite2.0)-image.png",
+  "marquee": null,
+  "thumbnail": null,
+  "zip_size_bytes": 3875789,
   "total_parts": 1,
-  "created_at": "2026-09-24T09:20:20"
+  "created_at": "2026-09-24T09:41:40"
 }

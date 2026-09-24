@@ -5,4 +5,4 @@ Package ID: 0003
 System: megadrive
 Original name: Real Bout Fatal Fury Genesis (Homebrew vLite2.0).zip
 Parts: 1
-ZIP size: 3875818
+ZIP size: 3875789

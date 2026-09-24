@@ -5,4 +5,4 @@ Package ID: 0001
 System: megadrive
 Original name: Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese).zip
 Parts: 1
-ZIP size: 890811
+ZIP size: 890784
