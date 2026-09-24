@@ -5,9 +5,11 @@
   "packages": [
     {
       "id": "0001",
-      "title": "Bulk Slash (English v1.001)[Undub].chd",
-      "type": "rom"
+      "title": "Bulk Slash (English v1.001)[Undub]",
+      "type": "rom",
+      "rom_name": "Bulk Slash (English v1.001)[Undub].chd",
+      "has_media": false
     }
   ],
-  "updated_at": "2026-09-23T23:47:52"
+  "updated_at": "2026-09-24T08:53:32"
 }
