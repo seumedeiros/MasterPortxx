@@ -27,6 +27,7 @@
 import os
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 import json
+import xml.etree.ElementTree as ET
 # KNULLI/PortMaster input bridge: GPTOKEYB converts the physical gamepad into SDL keyboard events.
 import ctypes
 import atexit
@@ -550,7 +551,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.4.0"
+APP_VERSION = "v1.5.0"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -1130,6 +1131,8 @@ def load_rom_manifest(system_folder, package_id, temp_dir):
         raise RuntimeError("Quantidade de partes da ROM inconsistente.")
     if int(manifest.get("part_size_bytes", 0)) != 25 * 1024 * 1024:
         raise RuntimeError("A ROM não está usando partes de 25 MB.")
+    if not isinstance(manifest.get("gamelist"), dict):
+        raise RuntimeError("Manifesto ROM sem metadados de gamelist.")
     return manifest
 
 
@@ -1251,9 +1254,74 @@ def download_rom(item):
                 with zf.open(name, "r") as src_file, open(target, "wb") as dst_file:
                     shutil.copyfileobj(src_file, dst_file, length=1024 * 1024)
 
+        update_rom_gamelist(system_folder, manifest)
         return "ok"
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+# ============================================================
+# GAMELIST v1.5
+# ============================================================
+GAMELIST_STATS = {"playcount", "lastplayed", "gametime"}
+GAMELIST_INTERNAL = {"md5", "crc32", "cheevosHash", "scrap"}
+
+def _safe_child_text(parent, tag):
+    node = parent.find(tag)
+    return (node.text or "").strip() if node is not None else ""
+
+def update_gamelist(gamelist_path, entry_data):
+    if os.path.isfile(gamelist_path):
+        tree = ET.parse(gamelist_path)
+        root = tree.getroot()
+        if root.tag != "gameList":
+            raise RuntimeError("gamelist.xml inválido: raiz diferente de gameList.")
+    else:
+        root = ET.Element("gameList")
+        tree = ET.ElementTree(root)
+    wanted = str(entry_data.get("path", "")).replace("\\", "/")
+    wanted_norm = wanted.lstrip("./")
+    target = None
+    for game in root.findall("game"):
+        current = _safe_child_text(game, "path").replace("\\", "/")
+        if current == wanted or current.lstrip("./") == wanted_norm:
+            target = game
+            break
+    if target is None:
+        target = ET.SubElement(root, "game")
+    for key, value in entry_data.items():
+        if value is None or value == "" or key in GAMELIST_STATS or key in GAMELIST_INTERNAL:
+            continue
+        node = target.find(key)
+        if node is None:
+            node = ET.SubElement(target, key)
+        node.text = str(value)
+    children = list(target)
+    for child in children:
+        target.remove(child)
+    order = ["path", "name", "desc", "image", "marquee", "thumbnail", "video", "rating", "releasedate", "developer", "publisher", "genre", "players", "lang", "region", "family"]
+    used=set()
+    for tag in order:
+        for child in children:
+            if id(child) not in used and child.tag == tag:
+                target.append(child); used.add(id(child)); break
+    for child in children:
+        if id(child) not in used:
+            target.append(child)
+    ET.indent(tree, space="\t", level=0)
+    tmp=gamelist_path+".masterportxx.tmp"
+    tree.write(tmp,encoding="utf-8",xml_declaration=True)
+    os.replace(tmp,gamelist_path)
+
+def update_rom_gamelist(system_folder, manifest):
+    data=manifest.get("gamelist")
+    if isinstance(data,dict):
+        update_gamelist(os.path.join(ROMS_LOCAL_BASE,system_folder,"gamelist.xml"),data)
+
+def update_ports_gamelist(manifest):
+    data=manifest.get("gamelist")
+    if isinstance(data,dict):
+        update_gamelist(os.path.join(PORTS_DIR,"gamelist.xml"),data)
 
 
 # ============================================================
@@ -1304,6 +1372,8 @@ def load_manifest(package_id, temp_dir):
 
     if len(parts) != total_parts:
         raise RuntimeError("Quantidade de partes inconsistente.")
+    if str(manifest.get("package_type", manifest.get("type", ""))).lower() == "port" and not isinstance(manifest.get("gamelist"), dict):
+        raise RuntimeError("Manifesto Port sem metadados de gamelist.")
 
     return manifest
 
@@ -1572,6 +1642,7 @@ def download_package(game):
                             length=1024 * 1024
                         )
 
+        update_ports_gamelist(manifest)
         return "ok"
 
     finally:
