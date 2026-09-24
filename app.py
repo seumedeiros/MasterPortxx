@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============================================================
-# MasterPortxx Downloader v1.3.6
+# MasterPortxx Downloader v1.5.4
 # RG35XX H / Knulli
 #
 # Compatível com a arquitetura gráfica já usada no app.py
@@ -551,13 +551,20 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.5.3"
+APP_VERSION = "v1.5.4"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/seumedeiros/MasterPortxx/main"
 ROMS_REMOTE_PATH = "ROMs"
 ROMS_LOCAL_BASE = "/userdata/roms"
+
+# Capas da interface. Padrão recomendado: 320x240 (4:3).
+# O Downloader mostra a capa em uma área de aproximadamente 200x150.
+COVER_CACHE_DIR = os.path.join(APP_DIR, "covers")
+COVER_WIDTH = 200
+COVER_HEIGHT = 150
+COVER_FILENAME = "cover.png"
 
 games = []
 selected = 0
@@ -800,6 +807,91 @@ def draw_tabs(active):
     ui.draw_text((280, 76), "[ROMs]" if active == 1 else "ROMs")
 
 
+def _draw_cover_box(x=415, y=118, width=COVER_WIDTH + 8, height=COVER_HEIGHT + 8):
+    ui.draw_rectangle([x, y, x + width, y + height], outline=(100, 100, 100))
+
+
+def _draw_cover(image_path, x=419, y=122, width=COVER_WIDTH, height=COVER_HEIGHT):
+    """Desenha cover.png dentro da área reservada sem alterar o aspect ratio."""
+    _draw_cover_box(x - 4, y - 4, width + 8, height + 8)
+    if image_path and os.path.isfile(image_path):
+        try:
+            ui.preview_image(
+                image_path,
+                target_x=x,
+                target_y=y,
+                target_width=width,
+                target_height=height
+            )
+            return True
+        except Exception:
+            pass
+    ui.draw_text((x + 48, y + 68), "SEM CAPA")
+    return False
+
+
+def _cover_cache_path(kind, package_id, system_folder=""):
+    os.makedirs(COVER_CACHE_DIR, exist_ok=True)
+    safe_kind = "rom" if kind == "rom" else "port"
+    safe_system = "".join(c if c.isalnum() or c in "-_" else "_" for c in str(system_folder))
+    safe_id = str(package_id).zfill(4)
+    name = "%s_%s%s.png" % (safe_kind, (safe_system + "_") if safe_system else "", safe_id)
+    return os.path.join(COVER_CACHE_DIR, name)
+
+
+cover_state_key = None
+cover_state_path = None
+cover_state_attempted = False
+
+
+def _ensure_cover(kind, package_id, system_folder=""):
+    """Baixa cover.png uma única vez por item e mantém cache local."""
+    global cover_state_key, cover_state_path, cover_state_attempted
+
+    safe_id = str(package_id).zfill(4)
+    key = "%s|%s|%s" % (kind, system_folder, safe_id)
+    cache_path = _cover_cache_path(kind, safe_id, system_folder)
+
+    if key != cover_state_key:
+        cover_state_key = key
+        cover_state_path = cache_path if os.path.isfile(cache_path) else None
+        cover_state_attempted = False
+
+    if cover_state_path and os.path.isfile(cover_state_path):
+        return cover_state_path
+
+    if cover_state_attempted:
+        return None
+
+    cover_state_attempted = True
+
+    if kind == "rom":
+        remote_path = "ROMs/%s/%s/%s" % (
+            str(system_folder).strip("/"), safe_id, COVER_FILENAME
+        )
+        url = github_raw_url(remote_path)
+    else:
+        url = SERVER_URL + "/" + safe_id + "/" + COVER_FILENAME
+
+    temp_path = cache_path + ".tmp"
+    try:
+        if wget_to_file(url, temp_path):
+            if os.path.getsize(temp_path) > 0:
+                os.replace(temp_path, cache_path)
+                cover_state_path = cache_path
+                return cache_path
+    except Exception:
+        pass
+    finally:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+
+    return None
+
+
 def draw_ports_menu():
     draw_header()
     draw_tabs(0)
@@ -820,9 +912,13 @@ def draw_ports_menu():
             package_id = str(game.get("id", "")).zfill(4)
             title = str(game.get("title", package_id))
             if i == selected:
-                ui.draw_rectangle([20, y - 6, ui.screen_width - 20, y + 28], outline=(0, 255, 120))
-            ui.draw_text((35, y), "%s - %s" % (package_id, title[:30]))
+                ui.draw_rectangle([20, y - 6, 400, y + 28], outline=(0, 255, 120))
+            ui.draw_text((35, y), "%s - %s" % (package_id, title[:26]))
             y += 40
+
+        selected_game = games[selected]
+        cover = _ensure_cover("port", selected_game.get("id", "0000"))
+        _draw_cover(cover)
 
     ui.draw_text((20, ui.screen_height - 58), "A = Baixar    X = Atualizar app")
     ui.draw_text((20, ui.screen_height - 32), "DY = Navegar    DX = Seção    B = Sair")
@@ -877,14 +973,18 @@ def draw_rom_files():
             package_id = str(item.get("id", "0000")).zfill(4)
             name = str(item.get("title", item.get("name", package_id)))
             if i == rom_file_selected:
-                ui.draw_rectangle([20, y - 6, ui.screen_width - 20, y + 28], outline=(0, 255, 120))
-            ui.draw_text((35, y), "%s - %s" % (package_id, name[:29]))
+                ui.draw_rectangle([20, y - 6, 400, y + 28], outline=(0, 255, 120))
+            ui.draw_text((35, y), "%s - %s" % (package_id, name[:26]))
             y += 40
+
+        system_folder = rom_system_path.split("/")[-1]
+        selected_rom = rom_files[rom_file_selected]
+        cover = _ensure_cover("rom", selected_rom.get("id", "0000"), system_folder)
+        _draw_cover(cover)
 
     ui.draw_text((20, ui.screen_height - 58), "A = Baixar ROM")
     ui.draw_text((20, ui.screen_height - 32), "DY = Navegar    B = Voltar")
     ui.draw_paint()
-
 
 def draw_menu():
     # Limpa o frame antes de redesenhar para evitar que textos
@@ -1029,7 +1129,7 @@ def load_rom_systems():
                     "path": "ROMs/" + name,
                     "package_count": int(item.get("package_count", 0) or 0)
                 })
-            rom_systems.sort(key=lambda x: x["name"].lower())
+            rom_systems.sort(key=lambda x: str(x.get("name", "")).casefold())
             return True
     except Exception:
         pass
@@ -1047,7 +1147,7 @@ def load_rom_systems():
             path = str(item.get("path", "")).strip("/")
             if name and path:
                 rom_systems.append({"name": name, "folder": name, "path": path, "package_count": 0})
-        rom_systems.sort(key=lambda x: x["name"].lower())
+        rom_systems.sort(key=lambda x: str(x.get("name", "")).casefold())
         return True
     except Exception:
         return False
@@ -1077,7 +1177,7 @@ def load_rom_files(remote_path):
                 "path": str(remote_path).strip("/") + "/" + package_id,
                 "type": "rom"
             })
-        rom_files.sort(key=lambda x: x["name"].lower())
+        rom_files.sort(key=lambda x: str(x.get("name", "")).casefold())
         return True
     except Exception:
         return False
@@ -1748,6 +1848,9 @@ def load_games():
             "title": str(game.get("title", package_id)),
             "description": str(game.get("description", ""))
         })
+
+    # A ordem exibida é sempre alfabética pelo nome do port, não pelo ID.
+    games.sort(key=lambda x: str(x.get("title", "")).casefold())
     return True
 
 
