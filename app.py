@@ -98,12 +98,18 @@ class MultiEvdevReader:
             button_map = {304:'A',305:'B',306:'Y',307:'X',308:'L1',309:'R1',314:'L2',315:'R2',310:'SELECT',311:'START',312:'MENUF',114:'V+',115:'V-'}
             if code in button_map: return button_map[code], value != 0
         elif typ == self.EV_ABS:
+            # O D-pad/analógico do RG35XX H pode aparecer como eixo ABS.
+            # Nesse caso, ao soltar o controle o eixo pode retornar por vários
+            # valores intermediários. Esses valores NÃO podem virar vários
+            # comandos de menu. O estado do eixo é tratado em read().
             if code in (self.ABS_HAT0X, self.ABS_X):
                 if value < 0: return 'DX-', True
                 if value > 0: return 'DX+', True
+                return None, False
             if code in (self.ABS_HAT0Y, self.ABS_Y):
                 if value < 0: return 'DY+', True
                 if value > 0: return 'DY-', True
+                return None, False
         return None, False
 
     def drain(self):
@@ -142,6 +148,33 @@ class MultiEvdevReader:
                     # EV_ABS values arrive as unsigned in the old struct; normalize to signed int.
                     if typ == self.EV_ABS and value >= 0x80000000:
                         value -= 0x100000000
+
+                    # Eixos: só gera um comando quando entra em uma direção.
+                    # Enquanto o eixo estiver naquela direção, e principalmente
+                    # enquanto volta fisicamente para o centro, não gera novos
+                    # comandos. Isso elimina o efeito "After Burner" relatado
+                    # pelo usuário, em que ao soltar o D-pad a seleção voltava
+                    # várias casas até o primeiro item.
+                    if typ == self.EV_ABS:
+                        axis_name = None
+                        direction = 0
+                        if code in (self.ABS_HAT0X, self.ABS_X):
+                            axis_name = "DX"
+                            if value < 0: direction = -1
+                            elif value > 0: direction = 1
+                        elif code in (self.ABS_HAT0Y, self.ABS_Y):
+                            axis_name = "DY"
+                            if value < 0: direction = -1
+                            elif value > 0: direction = 1
+
+                        if axis_name is not None:
+                            previous = self._axis_state[axis_name]
+                            self._axis_state[axis_name] = direction
+                            if direction == 0:
+                                continue
+                            if direction == previous:
+                                continue
+
                     name, pressed = self._translate(typ, code, value)
                     if name:
                         return name, (1 if pressed else -1), value
@@ -172,6 +205,10 @@ class SDLInputBridge:
         self._controller_ready = False
         self._controller_index = -1
         self.held_buttons = set()
+        # Estado dos eixos: evita que o retorno físico do analógico/D-pad
+        # seja interpretado como vários novos comandos.
+        self._axis_state = {"DX": 0, "DY": 0}
+        self._sdl_axis_state = {"DX": 0, "DY": 0}
         self._controller_init()
         self._evdev = MultiEvdevReader()
 
@@ -255,6 +292,11 @@ class SDLInputBridge:
         found = False
         while sdl2.SDL_PollEvent(ctypes.byref(ev)):
             if ev.type == sdl2.SDL_KEYDOWN:
+                # SDL pode gerar KEYDOWN repetido enquanto a tecla/D-pad está
+                # pressionada. Para navegação de menus queremos somente a
+                # primeira borda de pressão.
+                if getattr(ev.key, "repeat", 0):
+                    continue
                 name = self._key_name(ev.key.keysym.sym)
                 if name:
                     self._set_event(name, 1)
@@ -275,7 +317,30 @@ class SDLInputBridge:
                     self._set_event(name, -1)
                     return True
             elif ev.type == getattr(sdl2, "SDL_CONTROLLERAXISMOTION", 1616):
-                name = self._axis_to_name(ev.caxis.axis, ev.caxis.value)
+                axis = ev.caxis.axis
+                raw = int(ev.caxis.value)
+                axis_name = None
+                direction = 0
+                if axis == getattr(sdl2, "SDL_CONTROLLER_AXIS_LEFTX", 0):
+                    axis_name = "DX"
+                    if raw >= 8000: direction = 1
+                    elif raw <= -8000: direction = -1
+                elif axis == getattr(sdl2, "SDL_CONTROLLER_AXIS_LEFTY", 1):
+                    axis_name = "DY"
+                    if raw >= 8000: direction = 1
+                    elif raw <= -8000: direction = -1
+
+                if axis_name is not None:
+                    previous = self._sdl_axis_state[axis_name]
+                    self._sdl_axis_state[axis_name] = direction
+                    # Centro: apenas atualiza o estado, não navega.
+                    if direction == 0:
+                        continue
+                    # Mesma direção: não repete.
+                    if direction == previous:
+                        continue
+
+                name = self._axis_to_name(axis, raw)
                 if name:
                     self._set_event(name, 1)
                     return True
@@ -491,7 +556,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.3.3"
+APP_VERSION = "v1.3.4"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
