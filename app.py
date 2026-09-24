@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============================================================
-# MasterPortxx Downloader v1.3
+# MasterPortxx Downloader v1.3.2
 # RG35XX H / Knulli
 #
 # Compatível com a arquitetura gráfica já usada no app.py
@@ -351,10 +351,13 @@ class SDLInputBridge:
                 return self.codeName == "DX-" and self.value == 1
             return self.codeName in ("DX+", "DX-")
         if keyCodeName == "DY":
+            # Compatibilidade com o contrato antigo do MasterPortxx:
+            # DY=+1 significa BAIXO e DY=-1 significa CIMA.
+            # O evdev traduz fisicamente: baixo -> DY- e cima -> DY+.
             if keyValue == 1:
-                return self.codeName == "DY+" and self.value == 1
-            if keyValue == -1:
                 return self.codeName == "DY-" and self.value == 1
+            if keyValue == -1:
+                return self.codeName == "DY+" and self.value == 1
             return self.codeName in ("DY+", "DY-")
         if self.codeName == keyCodeName:
             return self.value == keyValue if keyValue != 99 else True
@@ -475,7 +478,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.3.1"
+APP_VERSION = "v1.3.2"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
