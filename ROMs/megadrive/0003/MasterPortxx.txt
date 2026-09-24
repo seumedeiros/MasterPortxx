@@ -1,0 +1,8 @@
+MASTERPORTXX PACKAGE
+Format: MasterPortxx
+Version: 1
+Package ID: 0003
+System: megadrive
+Original name: Real Bout Fatal Fury Genesis (Homebrew vLite2.0).bin
+Parts: 1
+ZIP size: 3650180

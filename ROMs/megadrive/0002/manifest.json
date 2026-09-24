@@ -1,0 +1,28 @@
+{
+  "format": "MasterPortxx",
+  "format_version": 1,
+  "packer_version": "1.4",
+  "package_id": "0002",
+  "original_name": "Project A-51 110926.bin",
+  "compression": "zip",
+  "part_size_bytes": 26214400,
+  "source_size_bytes": 1371812,
+  "file_count": 1,
+  "payload": "payload.zip",
+  "package_type": "rom",
+  "parts": [
+    {
+      "index": 1,
+      "file": "MasterPortxx_0001.mpx",
+      "size_bytes": 1012618,
+      "sha256": "85550779359b3ea6a79072a220c381b35c5c216d8bbeaaca39d2194062fd3446"
+    }
+  ],
+  "type": "rom",
+  "system_folder": "megadrive",
+  "destination": "/userdata/roms/megadrive",
+  "rom_name": "Project A-51 110926.bin",
+  "zip_size_bytes": 1012618,
+  "total_parts": 1,
+  "created_at": "2026-09-23T23:47:48"
+}

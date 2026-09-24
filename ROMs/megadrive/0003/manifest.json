@@ -1,0 +1,28 @@
+{
+  "format": "MasterPortxx",
+  "format_version": 1,
+  "packer_version": "1.4",
+  "package_id": "0003",
+  "original_name": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0).bin",
+  "compression": "zip",
+  "part_size_bytes": 26214400,
+  "source_size_bytes": 5242880,
+  "file_count": 1,
+  "payload": "payload.zip",
+  "package_type": "rom",
+  "parts": [
+    {
+      "index": 1,
+      "file": "MasterPortxx_0001.mpx",
+      "size_bytes": 3650180,
+      "sha256": "1886fb476a5483d2a0aa18b53840867fd736ef75f44567ce07807b5b55ca0f13"
+    }
+  ],
+  "type": "rom",
+  "system_folder": "megadrive",
+  "destination": "/userdata/roms/megadrive",
+  "rom_name": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0).bin",
+  "zip_size_bytes": 3650180,
+  "total_parts": 1,
+  "created_at": "2026-09-23T23:47:48"
+}
