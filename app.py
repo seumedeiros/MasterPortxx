@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============================================================
-# MasterPortxx Downloader v1.5.4
+# MasterPortxx Downloader v1.5.5
 # RG35XX H / Knulli
 #
 # Compatível com a arquitetura gráfica já usada no app.py
@@ -25,6 +25,7 @@
 # ============================================================
 
 import os
+from PIL import Image
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 import json
 # KNULLI/PortMaster input bridge: GPTOKEYB converts the physical gamepad into SDL keyboard events.
@@ -812,17 +813,17 @@ def _draw_cover_box(x=415, y=118, width=COVER_WIDTH + 8, height=COVER_HEIGHT + 8
 
 
 def _draw_cover(image_path, x=419, y=122, width=COVER_WIDTH, height=COVER_HEIGHT):
-    """Desenha cover.png dentro da área reservada sem alterar o aspect ratio."""
+    """Desenha cover.png no frame atual, sem apresentar a tela antes do fim do desenho."""
     _draw_cover_box(x - 4, y - 4, width + 8, height + 8)
     if image_path and os.path.isfile(image_path):
         try:
-            ui.preview_image(
-                image_path,
-                target_x=x,
-                target_y=y,
-                target_width=width,
-                target_height=height
-            )
+            # Não usar ui.preview_image() aqui: ele chama draw_paint() e
+            # apresenta um frame intermediário antes dos textos inferiores.
+            img = Image.open(image_path).convert("RGBA")
+            img.thumbnail((width, height), Image.LANCZOS)
+            paste_x = x + (width - img.width) // 2
+            paste_y = y + (height - img.height) // 2
+            ui.active_image.paste(img, (paste_x, paste_y), img)
             return True
         except Exception:
             pass
