@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============================================================
-# MasterPortxx Downloader v1.3.2
+# MasterPortxx Downloader v1.3.3
 # RG35XX H / Knulli
 #
 # Compatível com a arquitetura gráfica já usada no app.py
@@ -129,6 +129,16 @@ class MultiEvdevReader:
                     if len(data) != 24:
                         break
                     tv_sec, tv_usec, typ, code, value = struct.unpack('llHHI', data)
+
+                    # EV_KEY: 0 = release, 1 = press, 2 = autorepeat.
+                    # O v1.3.2 transformava o autorepeat (2) em novo comando
+                    # de navegação. No RG35XX H isso podia deixar eventos de
+                    # repetição na fila e, depois de soltar o D-pad, a lista
+                    # continuava andando sozinha até voltar ao primeiro item.
+                    # Para menus, usamos somente a borda de pressionar/soltar.
+                    if typ == self.EV_KEY and value == 2:
+                        continue
+
                     # EV_ABS values arrive as unsigned in the old struct; normalize to signed int.
                     if typ == self.EV_ABS and value >= 0x80000000:
                         value -= 0x100000000
@@ -345,20 +355,23 @@ class SDLInputBridge:
         # Compatibilidade: o evdev traduz o D-pad para DX+/DX-/DY+/DY-,
         # enquanto o restante do aplicativo consulta DX/DY com valor +/-1.
         if keyCodeName == "DX":
+            # Navegação é por evento de pressionamento, nunca por estado mantido.
             if keyValue == 1:
                 return self.codeName == "DX+" and self.value == 1
             if keyValue == -1:
                 return self.codeName == "DX-" and self.value == 1
-            return self.codeName in ("DX+", "DX-")
+            return self.codeName in ("DX+", "DX-") and self.value == 1
         if keyCodeName == "DY":
             # Compatibilidade com o contrato antigo do MasterPortxx:
             # DY=+1 significa BAIXO e DY=-1 significa CIMA.
             # O evdev traduz fisicamente: baixo -> DY- e cima -> DY+.
+            # Importante: somente value=1 (pressionar) altera a seleção.
+            # value=-1 é a soltura e nunca move a lista.
             if keyValue == 1:
                 return self.codeName == "DY-" and self.value == 1
             if keyValue == -1:
                 return self.codeName == "DY+" and self.value == 1
-            return self.codeName in ("DY+", "DY-")
+            return self.codeName in ("DY+", "DY-") and self.value == 1
         if self.codeName == keyCodeName:
             return self.value == keyValue if keyValue != 99 else True
         return False
@@ -478,7 +491,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.3.2"
+APP_VERSION = "v1.3.3"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
