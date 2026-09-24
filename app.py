@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============================================================
-# MasterPortxx Downloader v1.3.3
+# MasterPortxx Downloader v1.3.5
 # RG35XX H / Knulli
 #
 # Compatível com a arquitetura gráfica já usada no app.py
@@ -64,6 +64,10 @@ class MultiEvdevReader:
     def __init__(self):
         self.fds = []
         self.poller = select.poll()
+        # Estado por eixo + filtro de duplicação entre evdev/SDL/GPTOKEYB.
+        self._axis_state = {"DX": 0, "DY": 0}
+        self._last_dpad = None
+        self._last_dpad_time = 0.0
         self._open_devices()
 
     def _open_devices(self):
@@ -175,8 +179,30 @@ class MultiEvdevReader:
                             if direction == previous:
                                 continue
 
+                            # Um toque físico deve gerar EXATAMENTE um passo.
+                            # No RG35XX H o mesmo D-pad pode aparecer em mais
+                            # de um /dev/input/event* (inclusive via GPTOKEYB),
+                            # portanto um único toque pode chegar duplicado.
+                            # Ignoramos duplicatas muito próximas.
+                            import time
+                            now = time.monotonic()
+                            dpad_key = (axis_name, direction)
+                            if (self._last_dpad == dpad_key and
+                                    now - self._last_dpad_time < 0.18):
+                                continue
+                            self._last_dpad = dpad_key
+                            self._last_dpad_time = now
+
                     name, pressed = self._translate(typ, code, value)
                     if name:
+                        if name in ("DX+", "DX-", "DY+", "DY-") and value != 0:
+                            import time
+                            now = time.monotonic()
+                            if (self._last_dpad == name and
+                                    now - self._last_dpad_time < 0.18):
+                                continue
+                            self._last_dpad = name
+                            self._last_dpad_time = now
                         return name, (1 if pressed else -1), value
             except BlockingIOError:
                 pass
@@ -308,15 +334,24 @@ class SDLInputBridge:
                     return True
             elif ev.type == getattr(sdl2, "SDL_CONTROLLERBUTTONDOWN", 1617):
                 name = self._controller_button_name(ev.cbutton.button)
+                # D-pad fica exclusivamente no EVDEV para evitar que o mesmo
+                # toque seja recebido duas vezes (EVDEV + SDL).
+                if name in ("DY+", "DY-", "DX+", "DX-"):
+                    continue
                 if name:
                     self._set_event(name, 1)
                     return True
             elif ev.type == getattr(sdl2, "SDL_CONTROLLERBUTTONUP", 1618):
                 name = self._controller_button_name(ev.cbutton.button)
+                if name in ("DY+", "DY-", "DX+", "DX-"):
+                    continue
                 if name:
                     self._set_event(name, -1)
                     return True
             elif ev.type == getattr(sdl2, "SDL_CONTROLLERAXISMOTION", 1616):
+                # Não usar eixos SDL para navegação neste hardware.
+                # O EVDEV já fornece o D-pad e é a única fonte aceita para ele.
+                continue
                 axis = ev.caxis.axis
                 raw = int(ev.caxis.value)
                 axis_name = None
@@ -556,7 +591,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.3.4"
+APP_VERSION = "v1.3.5"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
