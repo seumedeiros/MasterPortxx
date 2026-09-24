@@ -3,6 +3,6 @@ Format: MasterPortxx
 Version: 1
 Package ID: 0002
 System: megadrive
-Original name: Project A-51 110926.bin
+Original name: Project A-51 110926.zip
 Parts: 1
-ZIP size: 1012618
+ZIP size: 1009201

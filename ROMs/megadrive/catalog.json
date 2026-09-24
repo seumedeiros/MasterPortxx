@@ -5,19 +5,25 @@
   "packages": [
     {
       "id": "0001",
-      "title": "Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese).bin",
-      "type": "rom"
+      "title": "Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese)",
+      "type": "rom",
+      "rom_name": "Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese).zip",
+      "has_media": false
     },
     {
       "id": "0002",
-      "title": "Project A-51 110926.bin",
-      "type": "rom"
+      "title": "Project A-51 110926",
+      "type": "rom",
+      "rom_name": "Project A-51 110926.zip",
+      "has_media": false
     },
     {
       "id": "0003",
-      "title": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0).bin",
-      "type": "rom"
+      "title": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0)",
+      "type": "rom",
+      "rom_name": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0).zip",
+      "has_media": false
     }
   ],
-  "updated_at": "2026-09-23T23:47:48"
+  "updated_at": "2026-09-24T08:53:28"
 }
