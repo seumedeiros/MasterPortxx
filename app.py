@@ -27,7 +27,6 @@
 import os
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 import json
-import xml.etree.ElementTree as ET
 # KNULLI/PortMaster input bridge: GPTOKEYB converts the physical gamepad into SDL keyboard events.
 import ctypes
 import atexit
@@ -534,6 +533,7 @@ import hashlib
 import shutil
 import tempfile
 import sys
+import xml.etree.ElementTree as ET
 from urllib.parse import quote
 from graphic import UserInterface
 
@@ -551,7 +551,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.5.0"
+APP_VERSION = "v1.5.3"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -1131,8 +1131,6 @@ def load_rom_manifest(system_folder, package_id, temp_dir):
         raise RuntimeError("Quantidade de partes da ROM inconsistente.")
     if int(manifest.get("part_size_bytes", 0)) != 25 * 1024 * 1024:
         raise RuntimeError("A ROM não está usando partes de 25 MB.")
-    if not isinstance(manifest.get("gamelist"), dict):
-        raise RuntimeError("Manifesto ROM sem metadados de gamelist.")
     return manifest
 
 
@@ -1254,74 +1252,151 @@ def download_rom(item):
                 with zf.open(name, "r") as src_file, open(target, "wb") as dst_file:
                     shutil.copyfileobj(src_file, dst_file, length=1024 * 1024)
 
-        update_rom_gamelist(system_folder, manifest)
+        # Atualiza o gamelist somente depois que todos os arquivos da ROM
+        # e da imagem foram instalados com sucesso.
+        try:
+            update_rom_gamelist(system_folder, manifest)
+        except Exception as exc:
+            raise RuntimeError("ROM instalada, mas não foi possível atualizar gamelist.xml: " + str(exc))
+
         return "ok"
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # ============================================================
-# GAMELIST v1.5
+# GAMELIST KNULLI — ROMS
 # ============================================================
-GAMELIST_STATS = {"playcount", "lastplayed", "gametime"}
-GAMELIST_INTERNAL = {"md5", "crc32", "cheevosHash", "scrap"}
 
-def _safe_child_text(parent, tag):
-    node = parent.find(tag)
-    return (node.text or "").strip() if node is not None else ""
+def _xml_text(element):
+    return (element.text or "").strip() if element is not None else ""
 
-def update_gamelist(gamelist_path, entry_data):
-    if os.path.isfile(gamelist_path):
-        tree = ET.parse(gamelist_path)
-        root = tree.getroot()
-        if root.tag != "gameList":
-            raise RuntimeError("gamelist.xml inválido: raiz diferente de gameList.")
-    else:
-        root = ET.Element("gameList")
-        tree = ET.ElementTree(root)
-    wanted = str(entry_data.get("path", "")).replace("\\", "/")
-    wanted_norm = wanted.lstrip("./")
-    target = None
-    for game in root.findall("game"):
-        current = _safe_child_text(game, "path").replace("\\", "/")
-        if current == wanted or current.lstrip("./") == wanted_norm:
-            target = game
-            break
-    if target is None:
-        target = ET.SubElement(root, "game")
-    for key, value in entry_data.items():
-        if value is None or value == "" or key in GAMELIST_STATS or key in GAMELIST_INTERNAL:
-            continue
-        node = target.find(key)
-        if node is None:
-            node = ET.SubElement(target, key)
-        node.text = str(value)
-    children = list(target)
-    for child in children:
-        target.remove(child)
-    order = ["path", "name", "desc", "image", "marquee", "thumbnail", "video", "rating", "releasedate", "developer", "publisher", "genre", "players", "lang", "region", "family"]
-    used=set()
-    for tag in order:
-        for child in children:
-            if id(child) not in used and child.tag == tag:
-                target.append(child); used.add(id(child)); break
-    for child in children:
-        if id(child) not in used:
-            target.append(child)
-    ET.indent(tree, space="\t", level=0)
-    tmp=gamelist_path+".masterportxx.tmp"
-    tree.write(tmp,encoding="utf-8",xml_declaration=True)
-    os.replace(tmp,gamelist_path)
+
+def _safe_xml_write(root, path):
+    tree = ET.ElementTree(root)
+    try:
+        ET.indent(tree, space="\t", level=0)
+    except Exception:
+        pass
+    tmp = path + ".masterportxx.tmp"
+    tree.write(tmp, encoding="utf-8", xml_declaration=True)
+    os.replace(tmp, path)
+
+
+def _manifest_rom_gamelist_data(system_folder, manifest):
+    """Monta os dados da entrada sem exigir 'gamelist' no manifest.
+
+    Packer v1.5.2 fornece image/marquee/thumbnail no próprio manifest.
+    Para compatibilidade, também aceita manifestos antigos que tenham
+    um bloco 'gamelist'.
+    """
+    rom_name = str(manifest.get("rom_name") or manifest.get("original_name") or "").strip()
+    if not rom_name:
+        raise RuntimeError("Manifesto ROM sem nome da ROM.")
+
+    base_name = os.path.splitext(os.path.basename(rom_name))[0]
+    old = manifest.get("gamelist")
+    if not isinstance(old, dict):
+        old = {}
+
+    data = {
+        "path": "./" + os.path.basename(rom_name),
+        "name": str(old.get("name") or base_name),
+    }
+
+    # Packer v1.5.2 grava estes caminhos no manifest.
+    image = manifest.get("image")
+    marquee = manifest.get("marquee")
+    thumbnail = manifest.get("thumbnail")
+
+    # Compatibilidade com manifests que guardam a mídia dentro de gamelist.
+    image = image or old.get("image")
+    marquee = marquee or old.get("marquee")
+    thumbnail = thumbnail or old.get("thumbnail")
+
+    # Mesmo sem arquivo de imagem, escrevemos o caminho esperado no gamelist.
+    # Isso permite ao usuário colocar a imagem manualmente depois.
+    if not image:
+        image = "./images/" + base_name + "-image.png"
+    if not marquee:
+        marquee = "./images/" + base_name + "-marquee.png"
+    if not thumbnail:
+        thumbnail = "./images/" + base_name + "-thumb.png"
+
+    data["image"] = str(image)
+    data["marquee"] = str(marquee)
+    data["thumbnail"] = str(thumbnail)
+
+    # Campos opcionais já existentes no manifest/gamelist.
+    for key in ("desc", "rating", "releasedate", "developer", "publisher", "genre", "players", "lang", "region", "family", "video"):
+        if old.get(key) is not None and str(old.get(key)).strip():
+            data[key] = str(old[key])
+
+    return data
+
 
 def update_rom_gamelist(system_folder, manifest):
-    data=manifest.get("gamelist")
-    if isinstance(data,dict):
-        update_gamelist(os.path.join(ROMS_LOCAL_BASE,system_folder,"gamelist.xml"),data)
+    """Cria/atualiza /userdata/roms/<sistema>/gamelist.xml.
 
-def update_ports_gamelist(manifest):
-    data=manifest.get("gamelist")
-    if isinstance(data,dict):
-        update_gamelist(os.path.join(PORTS_DIR,"gamelist.xml"),data)
+    Se a ROM já existir, preserva playcount, lastplayed, gametime e outros
+    campos que não são substituídos. Se não existir, cria uma nova entrada.
+    """
+    safe_system = os.path.basename(str(system_folder).strip("/"))
+    if not safe_system or safe_system in (".", ".."):
+        raise RuntimeError("Sistema inválido para gamelist.")
+
+    system_dir = os.path.realpath(os.path.join(ROMS_LOCAL_BASE, safe_system))
+    os.makedirs(system_dir, exist_ok=True)
+    gamelist_path = os.path.join(system_dir, "gamelist.xml")
+    data = _manifest_rom_gamelist_data(safe_system, manifest)
+
+    try:
+        if os.path.isfile(gamelist_path):
+            tree = ET.parse(gamelist_path)
+            root = tree.getroot()
+        else:
+            root = ET.Element("gameList")
+    except Exception:
+        # Não destrói o arquivo original se o XML existente estiver inválido.
+        broken = gamelist_path + ".broken"
+        try:
+            shutil.copy2(gamelist_path, broken)
+        except Exception:
+            pass
+        root = ET.Element("gameList")
+
+    wanted = data["path"].replace("\\", "/").lstrip("./")
+    wanted_base = os.path.basename(wanted)
+    found = None
+
+    for game in root.findall("game"):
+        path_el = game.find("path")
+        current = _xml_text(path_el).replace("\\", "/").lstrip("./")
+        if current == wanted or os.path.basename(current) == wanted_base:
+            found = game
+            break
+
+    if found is None:
+        found = ET.SubElement(root, "game")
+        ET.SubElement(found, "path")
+
+    # Atualiza somente os campos controlados pelo MasterPortxx.
+    # Estatísticas do usuário permanecem intactas.
+    ordered = ["path", "name", "desc", "image", "marquee", "thumbnail", "video",
+               "rating", "releasedate", "developer", "publisher", "genre",
+               "players", "lang", "region", "family"]
+    values = {"path": data["path"], **data}
+
+    for tag in ordered:
+        if tag not in values:
+            continue
+        child = found.find(tag)
+        if child is None:
+            child = ET.SubElement(found, tag)
+        child.text = str(values[tag])
+
+    _safe_xml_write(root, gamelist_path)
+    return gamelist_path
 
 
 # ============================================================
@@ -1372,8 +1447,6 @@ def load_manifest(package_id, temp_dir):
 
     if len(parts) != total_parts:
         raise RuntimeError("Quantidade de partes inconsistente.")
-    if str(manifest.get("package_type", manifest.get("type", ""))).lower() == "port" and not isinstance(manifest.get("gamelist"), dict):
-        raise RuntimeError("Manifesto Port sem metadados de gamelist.")
 
     return manifest
 
@@ -1642,7 +1715,6 @@ def download_package(game):
                             length=1024 * 1024
                         )
 
-        update_ports_gamelist(manifest)
         return "ok"
 
     finally:
@@ -1786,6 +1858,7 @@ def main():
                         item.get("title", item.get("name", item.get("id", "ROM"))), "",
                         "Sistema:", rom_system_path.split("/")[-1],
                         "", "Destino:", os.path.join(ROMS_LOCAL_BASE, rom_system_path.split("/")[-1]),
+                        "", "gamelist.xml atualizado",
                         "", "A = Continuar    B = Voltar"
                     ])
                 except Exception as e:
