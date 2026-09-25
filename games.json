@@ -1,9 +1,14 @@
 {
-    "games": [
-        {
-            "id": "0001",
-            "title": "Limbo",
-            "description": "PortMaster"
-        }
-    ]
+  "games": [
+    {
+      "id": "0002",
+      "title": "Bloodstained Curse of the Moon",
+      "description": "PortMaster"
+    },
+    {
+      "id": "0001",
+      "title": "Limbo",
+      "description": "PortMaster"
+    }
+  ]
 }
