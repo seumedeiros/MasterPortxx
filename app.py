@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============================================================
-# MasterPortxx Downloader v1.5.5
+# MasterPortxx Downloader v1.5.6
 # RG35XX H / Knulli
 #
 # Compatível com a arquitetura gráfica já usada no app.py
@@ -552,7 +552,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.5.4"
+APP_VERSION = "v1.5.6"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -1500,6 +1500,91 @@ def update_rom_gamelist(system_folder, manifest):
     return gamelist_path
 
 
+def update_ports_gamelist(manifest):
+    """Atualiza o gamelist.xml REAL dos Ports no armazenamento ativo do Knulli.
+
+    O Packer envia os metadados em manifest["gamelist"]. O XML local fica em
+    /userdata/roms/ports/gamelist.xml; nenhuma cópia de gamelist é criada no
+    servidor/pasta de pacotes. Estatísticas existentes são preservadas.
+    """
+    data = manifest.get("gamelist")
+    if not isinstance(data, dict):
+        # Compatibilidade com pacotes antigos que ainda não carregavam esses dados.
+        return False
+
+    gamelist_path = os.path.join(PORTS_DIR, "gamelist.xml")
+    os.makedirs(PORTS_DIR, exist_ok=True)
+
+    try:
+        if os.path.isfile(gamelist_path):
+            tree = ET.parse(gamelist_path)
+            root = tree.getroot()
+            if root.tag != "gameList":
+                raise RuntimeError("gamelist.xml inválido: raiz diferente de gameList.")
+        else:
+            root = ET.Element("gameList")
+    except Exception:
+        broken = gamelist_path + ".broken"
+        try:
+            shutil.copy2(gamelist_path, broken)
+        except Exception:
+            pass
+        root = ET.Element("gameList")
+
+    wanted = str(data.get("path", "")).replace("\\", "/")
+    if not wanted:
+        return False
+    wanted_norm = wanted.lstrip("./")
+
+    target = None
+    for game in root.findall("game"):
+        path_node = game.find("path")
+        current = _xml_text(path_node).replace("\\", "/")
+        if current == wanted or current.lstrip("./") == wanted_norm:
+            target = game
+            break
+
+    if target is None:
+        target = ET.SubElement(root, "game")
+
+    values = {
+        "path": data.get("path"),
+        "name": data.get("name"),
+        "image": data.get("image"),
+    }
+
+    # Só altera os campos fornecidos pelo pacote. Estatísticas como
+    # playcount/lastplayed/gametime e outros campos existentes permanecem.
+    for tag, value in values.items():
+        if value is None or str(value).strip() == "":
+            continue
+        node = target.find(tag)
+        if node is None:
+            node = ET.SubElement(target, tag)
+        node.text = str(value)
+
+    # Mantém o padrão visual do gamelist do Knulli: path, name, image primeiro.
+    children = list(target)
+    for child in children:
+        target.remove(child)
+    order = ["path", "name", "desc", "image", "marquee", "thumbnail", "video",
+             "rating", "releasedate", "developer", "publisher", "genre", "players",
+             "lang", "region", "family"]
+    used = set()
+    for tag in order:
+        for child in children:
+            if child not in used and child.tag == tag:
+                target.append(child)
+                used.add(child)
+                break
+    for child in children:
+        if child not in used:
+            target.append(child)
+
+    _safe_xml_write(root, gamelist_path)
+    return True
+
+
 # ============================================================
 # HASH
 # ============================================================
@@ -1815,6 +1900,10 @@ def download_package(game):
                             dst,
                             length=1024 * 1024
                         )
+
+            # Depois de extrair o Port, atualiza o gamelist.xml que realmente
+            # pertence ao sistema Ports do Knulli.
+            update_ports_gamelist(manifest)
 
         return "ok"
 
