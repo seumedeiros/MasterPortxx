@@ -1,0 +1,7 @@
+MASTERPORTXX PACKAGE
+Format: MasterPortxx
+Version: 1
+Package ID: 0002
+Original name: Bloodstained Curse of the Moon
+Parts: 2
+ZIP size: 33899427

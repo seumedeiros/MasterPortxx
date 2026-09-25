@@ -1,0 +1,30 @@
+{
+  "format": "MasterPortxx",
+  "format_version": 1,
+  "packer_version": "1.5.2",
+  "package_id": "0002",
+  "original_name": "Bloodstained Curse of the Moon",
+  "compression": "zip",
+  "part_size_bytes": 26214400,
+  "source_size_bytes": 36652192,
+  "file_count": 68,
+  "payload": "payload.zip",
+  "package_type": "port",
+  "parts": [
+    {
+      "index": 1,
+      "file": "MasterPortxx_0001.mpx",
+      "size_bytes": 26214400,
+      "sha256": "0f6669037818ad2329c81c037c5f902876c1bf177b5c7c69f3524ddf727f9b69"
+    },
+    {
+      "index": 2,
+      "file": "MasterPortxx_0002.mpx",
+      "size_bytes": 7685027,
+      "sha256": "5cbc5fadf2385e3d7edb3fe4ac7aef0c7c4585462fada489f1eb7b07408f301c"
+    }
+  ],
+  "zip_size_bytes": 33899427,
+  "total_parts": 2,
+  "created_at": "2026-09-25T13:40:24"
+}
