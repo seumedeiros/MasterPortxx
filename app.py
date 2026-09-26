@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============================================================
-# MasterPortxx Downloader v1.5.6
+# MasterPortxx Downloader v1.5.7
 # RG35XX H / Knulli
 #
 # Compatível com a arquitetura gráfica já usada no app.py
@@ -552,7 +552,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.5.6"
+APP_VERSION = "v1.5.7"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -566,6 +566,11 @@ COVER_CACHE_DIR = os.path.join(APP_DIR, "covers")
 COVER_WIDTH = 200
 COVER_HEIGHT = 150
 COVER_FILENAME = "cover.png"
+
+# Arquivo de novidades publicado separadamente do catálogo.
+NEWS_FILENAME = "novidades.txt"
+NEWS_CACHE_DIR = "/userdata/system/configs"
+NEWS_CACHE_PATH = os.path.join(NEWS_CACHE_DIR, NEWS_FILENAME)
 
 games = []
 selected = 0
@@ -791,6 +796,12 @@ rom_system_selected = 0
 rom_file_selected = 0
 rom_system_path = ""
 
+news_open = False
+news_lines = []
+news_scroll = 0
+news_loaded = False
+news_status = ""
+
 
 def draw_header(title=""):
     ui.draw_text((25, 20), "MASTERPORTXX " + APP_VERSION)
@@ -987,6 +998,131 @@ def draw_rom_files():
     ui.draw_text((20, ui.screen_height - 32), "DY = Navegar    B = Voltar")
     ui.draw_paint()
 
+def _wrap_news_text(text, width=55):
+    """Quebra as linhas do TXT para caber na tela 640x480."""
+    text = str(text).replace("\t", "    ").rstrip("\r")
+    if not text:
+        return [""]
+    words = text.split(" ")
+    lines = []
+    current = ""
+    for word in words:
+        if not word:
+            continue
+        candidate = word if not current else current + " " + word
+        if len(candidate) <= width:
+            current = candidate
+            continue
+        if current:
+            lines.append(current)
+            current = ""
+        while len(word) > width:
+            lines.append(word[:width])
+            word = word[width:]
+        current = word
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+
+def _prepare_news_lines(text):
+    result = []
+    for raw in str(text).replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        result.extend(_wrap_news_text(raw, 55))
+    return result
+
+
+def load_news(force=False):
+    """Baixa novidades.txt e mantém uma cópia local para uso offline."""
+    global news_lines, news_loaded, news_status, news_scroll
+
+    if news_loaded and not force:
+        return bool(news_lines)
+
+    news_loaded = True
+    news_status = ""
+    news_scroll = 0
+
+    try:
+        os.makedirs(NEWS_CACHE_DIR, exist_ok=True)
+    except Exception:
+        pass
+
+    temp_path = os.path.join(
+        NEWS_CACHE_DIR if os.path.isdir(NEWS_CACHE_DIR) else "/tmp",
+        ".masterportxx_novidades_%d.txt" % os.getpid()
+    )
+    url = SERVER_URL.rstrip("/") + "/" + NEWS_FILENAME
+
+    try:
+        if wget_to_file(url, temp_path):
+            with open(temp_path, "r", encoding="utf-8-sig") as f:
+                text = f.read()
+            if text.strip():
+                try:
+                    os.replace(temp_path, NEWS_CACHE_PATH)
+                except Exception:
+                    shutil.copy2(temp_path, NEWS_CACHE_PATH)
+                news_lines = _prepare_news_lines(text)
+                news_status = "ONLINE"
+                return True
+    except Exception:
+        pass
+    finally:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+
+    # Servidor indisponível: usa a última cópia baixada.
+    try:
+        if os.path.isfile(NEWS_CACHE_PATH):
+            with open(NEWS_CACHE_PATH, "r", encoding="utf-8-sig") as f:
+                text = f.read()
+            if text.strip():
+                news_lines = _prepare_news_lines(text)
+                news_status = "CÓPIA LOCAL"
+                return True
+    except Exception:
+        pass
+
+    news_lines = [
+        "Não foi possível carregar novidades.txt.",
+        "",
+        "Verifique a conexão com o servidor.",
+        "",
+        "O arquivo esperado é:",
+        NEWS_FILENAME
+    ]
+    news_status = "SEM ARQUIVO"
+    return False
+
+
+def draw_news_menu():
+    draw_header("NOVIDADES")
+
+    if not news_lines:
+        ui.draw_text((30, 125), "Nenhuma novidade disponível.")
+    else:
+        # Mostra o texto como uma página rolável.
+        visible = 12
+        start = max(0, min(news_scroll, max(0, len(news_lines) - visible)))
+        end = min(len(news_lines), start + visible)
+        y = 88
+        for line in news_lines[start:end]:
+            ui.draw_text((25, y), line)
+            y += 28
+
+        if len(news_lines) > visible:
+            ui.draw_text((25, 430), "LINHAS %d-%d/%d" % (start + 1, end, len(news_lines)))
+
+    ui.draw_text((20, ui.screen_height - 32), "DY = Rolar    A = Atualizar    B = Voltar")
+    if news_status:
+        ui.draw_text((390, ui.screen_height - 32), news_status)
+    ui.draw_paint()
+
+
 def draw_menu():
     # Limpa o frame antes de redesenhar para evitar que textos
     # do estado anterior fiquem sobrepostos ao menu atual.
@@ -996,8 +1132,10 @@ def draw_menu():
         draw_ports_menu()
     elif section == 1 and rom_system_path:
         draw_rom_files()
-    else:
+    elif section == 1:
         draw_rom_systems()
+    elif section == 2:
+        draw_news_menu()
 
 
 def show_status(title, lines):
@@ -1500,16 +1638,18 @@ def update_rom_gamelist(system_folder, manifest):
     return gamelist_path
 
 
-def update_ports_gamelist(manifest):
-    """Atualiza o gamelist.xml REAL dos Ports no armazenamento ativo do Knulli.
+# ============================================================
+# GAMELIST KNULLI — PORTS
+# ============================================================
 
-    O Packer envia os metadados em manifest["gamelist"]. O XML local fica em
-    /userdata/roms/ports/gamelist.xml; nenhuma cópia de gamelist é criada no
-    servidor/pasta de pacotes. Estatísticas existentes são preservadas.
+def update_ports_gamelist(manifest):
+    """Atualiza o gamelist.xml REAL dos Ports no portátil.
+
+    A entrada vem do bloco "gamelist" do manifesto criado pelo Packer
+    v1.5.5/v1.5.6. Estatísticas e outros campos existentes são preservados.
     """
     data = manifest.get("gamelist")
     if not isinstance(data, dict):
-        # Compatibilidade com pacotes antigos que ainda não carregavam esses dados.
         return False
 
     gamelist_path = os.path.join(PORTS_DIR, "gamelist.xml")
@@ -1526,17 +1666,16 @@ def update_ports_gamelist(manifest):
     except Exception:
         broken = gamelist_path + ".broken"
         try:
-            shutil.copy2(gamelist_path, broken)
+            if os.path.isfile(gamelist_path):
+                shutil.copy2(gamelist_path, broken)
         except Exception:
             pass
         root = ET.Element("gameList")
 
     wanted = str(data.get("path", "")).replace("\\", "/")
-    if not wanted:
-        return False
     wanted_norm = wanted.lstrip("./")
-
     target = None
+
     for game in root.findall("game"):
         path_node = game.find("path")
         current = _xml_text(path_node).replace("\\", "/")
@@ -1547,38 +1686,35 @@ def update_ports_gamelist(manifest):
     if target is None:
         target = ET.SubElement(root, "game")
 
-    values = {
-        "path": data.get("path"),
-        "name": data.get("name"),
-        "image": data.get("image"),
-    }
-
-    # Só altera os campos fornecidos pelo pacote. Estatísticas como
-    # playcount/lastplayed/gametime e outros campos existentes permanecem.
-    for tag, value in values.items():
-        if value is None or str(value).strip() == "":
+    # Somente os campos controlados pelo pacote são atualizados.
+    # playcount/lastplayed/gametime e outros campos existentes ficam intactos.
+    for key in ("path", "name", "image", "desc", "marquee", "thumbnail", "video"):
+        value = data.get(key)
+        if value is None or str(value) == "":
             continue
-        node = target.find(tag)
+        node = target.find(key)
         if node is None:
-            node = ET.SubElement(target, tag)
+            node = ET.SubElement(target, key)
         node.text = str(value)
 
-    # Mantém o padrão visual do gamelist do Knulli: path, name, image primeiro.
     children = list(target)
     for child in children:
         target.remove(child)
-    order = ["path", "name", "desc", "image", "marquee", "thumbnail", "video",
-             "rating", "releasedate", "developer", "publisher", "genre", "players",
-             "lang", "region", "family"]
+
+    order = [
+        "path", "name", "desc", "image", "marquee", "thumbnail", "video",
+        "rating", "releasedate", "developer", "publisher", "genre",
+        "players", "lang", "region", "family"
+    ]
     used = set()
     for tag in order:
         for child in children:
-            if child not in used and child.tag == tag:
+            if id(child) not in used and child.tag == tag:
                 target.append(child)
-                used.add(child)
+                used.add(id(child))
                 break
     for child in children:
-        if child not in used:
+        if id(child) not in used:
             target.append(child)
 
     _safe_xml_write(root, gamelist_path)
@@ -1633,6 +1769,12 @@ def load_manifest(package_id, temp_dir):
 
     if len(parts) != total_parts:
         raise RuntimeError("Quantidade de partes inconsistente.")
+
+    package_type = str(manifest.get("package_type", manifest.get("type", ""))).lower()
+    if package_type == "port" and not isinstance(manifest.get("gamelist"), dict):
+        # Pacotes antigos continuam podendo ser instalados; apenas não terão
+        # atualização automática do gamelist.xml.
+        pass
 
     return manifest
 
@@ -1901,9 +2043,15 @@ def download_package(game):
                             length=1024 * 1024
                         )
 
-            # Depois de extrair o Port, atualiza o gamelist.xml que realmente
-            # pertence ao sistema Ports do Knulli.
-            update_ports_gamelist(manifest)
+        # O Packer não cria gamelist.xml externo. O Downloader atualiza o
+        # gamelist.xml real do portátil somente após a extração ter terminado.
+        if isinstance(manifest.get("gamelist"), dict):
+            try:
+                update_ports_gamelist(manifest)
+            except Exception as exc:
+                raise RuntimeError(
+                    "Port instalado, mas não foi possível atualizar gamelist.xml: " + str(exc)
+                )
 
         return "ok"
 
@@ -1945,7 +2093,7 @@ def load_games():
 
 
 def main():
-    global selected, section, rom_system_selected, rom_file_selected, rom_system_path
+    global selected, section, rom_system_selected, rom_file_selected, rom_system_path, news_open, news_scroll, news_loaded
 
     load_config()
     input.start_gptokeyb()
@@ -1967,12 +2115,21 @@ def main():
     rom_system_selected = 0
     rom_file_selected = 0
     rom_system_path = ""
+    news_open = False
+    news_scroll = 0
+    news_loaded = False
 
     while True:
         draw_menu()
         input.check()
 
         if input.key("B"):
+            if section == 2 and news_open:
+                news_open = False
+                news_scroll = 0
+                input.wait_button_release("B")
+                input.discard_pending()
+                continue
             if section == 1 and rom_system_path:
                 rom_system_path = ""
                 rom_files.clear()
@@ -1992,12 +2149,38 @@ def main():
             restore_app_backup()
             continue
 
-        # Esquerda/direita alterna entre Ports e ROMs.
-        if not rom_system_path and input.key("DX", 1):
-            section = 1
+        # Esquerda/direita alterna entre Ports, ROMs e NOVIDADES.
+        if not rom_system_path and not news_open and input.key("DX", 1):
+            section = (section + 1) % 3
+            if section == 2:
+                load_news(False)
             continue
-        if not rom_system_path and input.key("DX", -1):
-            section = 0
+        if not rom_system_path and not news_open and input.key("DX", -1):
+            section = (section - 1) % 3
+            if section == 2:
+                load_news(False)
+            continue
+
+        if section == 2:
+            if not news_open:
+                if input.key("A"):
+                    load_news(False)
+                    news_open = True
+                    news_scroll = 0
+                    input.wait_button_release("A")
+                    input.discard_pending()
+                continue
+
+            if input.key("DY", 1):
+                news_scroll = min(news_scroll + 1, max(0, len(news_lines) - 12))
+            elif input.key("DY", -1):
+                news_scroll = max(0, news_scroll - 1)
+            elif input.key("A"):
+                # A atualiza o TXT diretamente do servidor.
+                load_news(True)
+                news_scroll = 0
+                input.wait_button_release("A")
+                input.discard_pending()
             continue
 
         if section == 0:

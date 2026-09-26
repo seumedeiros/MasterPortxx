@@ -1,0 +1,60 @@
+==================================================
+          MASTERPORTXX - NOVIDADES
+==================================================
+
+DATA: 26/09/2026
+VERSÃO: DOWNLOADER v1.5.7
+
+🆕 NOVO PAINEL "NOVIDADES"
+
+A partir da versão 1.5.7, o MasterPortXX Downloader
+passa a contar com um novo painel exclusivo para
+visualização das últimas novidades do projeto.
+
+Agora ficou muito mais fácil acompanhar os novos
+Ports adicionados, atualizações e outras mudanças
+sem precisar procurar no meio de toda a lista de
+jogos disponíveis.
+
+--------------------------------------------------
+
+📢 O QUE FOI ADICIONADO
+
+• Novo painel NOVIDADES no Downloader.
+
+• Leitura automática do arquivo novidades.txt.
+
+• Sistema de rolagem para visualizar textos maiores.
+
+• Atualização manual das novidades pelo botão A.
+
+• Cópia local das novidades para permitir a leitura
+  mesmo quando o servidor estiver temporariamente
+  indisponível.
+
+• O arquivo de novidades é independente dos pacotes
+  .mpx e do games.json.
+
+--------------------------------------------------
+
+📅 COMO FUNCIONARÁ
+
+Sempre que um novo Port for adicionado ou houver
+alguma atualização importante no MasterPortXX,
+este arquivo será atualizado com as informações
+mais recentes.
+
+Assim, o usuário poderá abrir o painel NOVIDADES
+diretamente no portátil e conferir rapidamente
+o que foi adicionado recentemente.
+
+--------------------------------------------------
+
+🎮 MASTERPORTXX
+
+Ports • ROMs • Downloads • Atualizações
+
+Desenvolvido para facilitar a instalação e
+organização de jogos no KNULLI / RG35XX H.
+
+==================================================
