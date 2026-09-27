@@ -1,0 +1,8 @@
+MASTERPORTXX PACKAGE
+Format: MasterPortxx
+Version: 1
+Package ID: 0004
+System: megadrive
+Original name: blacktiger_MD_v1.2.zip
+Parts: 1
+ZIP size: 1459030
