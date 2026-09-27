@@ -1,1 +1,293 @@
-
+{
+  "format": "MasterPortxx",
+  "format_version": 1,
+  "packer_version": "1.5.7",
+  "package_id": "0003",
+  "original_name": "Super Smash Bros. Melee",
+  "compression": "zip",
+  "part_size_bytes": 26214400,
+  "source_size_bytes": 1179229284,
+  "file_count": 36,
+  "payload": "payload.zip",
+  "package_type": "port",
+  "parts": [
+    {
+      "index": 1,
+      "file": "MasterPortxx_0001.mpx",
+      "size_bytes": 26214400,
+      "sha256": "325403bd92a29e641cf797a015d5ed9814d50b85db06962c9eabecfc8c205ff5"
+    },
+    {
+      "index": 2,
+      "file": "MasterPortxx_0002.mpx",
+      "size_bytes": 26214400,
+      "sha256": "d0fd9cd3ebac288923ef2699e38d463e72efe91ed8cdcefb05864ea1e1004bf9"
+    },
+    {
+      "index": 3,
+      "file": "MasterPortxx_0003.mpx",
+      "size_bytes": 26214400,
+      "sha256": "03855235f030581816db2d356debdcee1751b3d1cdf583578e4b0204beeed206"
+    },
+    {
+      "index": 4,
+      "file": "MasterPortxx_0004.mpx",
+      "size_bytes": 26214400,
+      "sha256": "cf44eca0e29bf9e71d6f178d77fb24ae80b95162ffb450e217019672b5065898"
+    },
+    {
+      "index": 5,
+      "file": "MasterPortxx_0005.mpx",
+      "size_bytes": 26214400,
+      "sha256": "f8f999d45dc90276bba98d306313989095da4ccb4d00f77afbafac09f89637e9"
+    },
+    {
+      "index": 6,
+      "file": "MasterPortxx_0006.mpx",
+      "size_bytes": 26214400,
+      "sha256": "294fc96de792ccbbe7b2c4c5269dc1c96d5b14ec781d3d7f022b8d53cd8fddb7"
+    },
+    {
+      "index": 7,
+      "file": "MasterPortxx_0007.mpx",
+      "size_bytes": 26214400,
+      "sha256": "3749fe4292ec26500dd3e1e9919d6a85c8542742643006aa7ff9def704928582"
+    },
+    {
+      "index": 8,
+      "file": "MasterPortxx_0008.mpx",
+      "size_bytes": 26214400,
+      "sha256": "2852c9e13a686ea3fd588f5782327ee2609088fc87cbe395911e0f3689a0b32e"
+    },
+    {
+      "index": 9,
+      "file": "MasterPortxx_0009.mpx",
+      "size_bytes": 26214400,
+      "sha256": "c3f0ddad93ff83d4f2b791e1093d3a07aeb1dac3c5d00fa9fd76f1d594f075a1"
+    },
+    {
+      "index": 10,
+      "file": "MasterPortxx_0010.mpx",
+      "size_bytes": 26214400,
+      "sha256": "35c30862f6af0b14d03a61dd9ec81580ac613f4010e7f1d867f92ecb58eb6436"
+    },
+    {
+      "index": 11,
+      "file": "MasterPortxx_0011.mpx",
+      "size_bytes": 26214400,
+      "sha256": "0b1907ddc9d704aa7025a36e400c5b48e2ddb92f1d4aa8d380a3c66736370af3"
+    },
+    {
+      "index": 12,
+      "file": "MasterPortxx_0012.mpx",
+      "size_bytes": 26214400,
+      "sha256": "959b6cac1dbcb17608d88e129c6da3aeae3bb8527f70796823ff403852e21330"
+    },
+    {
+      "index": 13,
+      "file": "MasterPortxx_0013.mpx",
+      "size_bytes": 26214400,
+      "sha256": "c67759c3c44b7972413fe20d487ed3fc2e3537280d2bdc533ad73fff1da40826"
+    },
+    {
+      "index": 14,
+      "file": "MasterPortxx_0014.mpx",
+      "size_bytes": 26214400,
+      "sha256": "ce86b9357eea192f1cf43afd9c9299b49e421eb07a9a66bfbbd0aaeea8640e62"
+    },
+    {
+      "index": 15,
+      "file": "MasterPortxx_0015.mpx",
+      "size_bytes": 26214400,
+      "sha256": "40e6b1c130d4664fc9e1560f665136e53397668d855d6973850ba1f62bc5c50c"
+    },
+    {
+      "index": 16,
+      "file": "MasterPortxx_0016.mpx",
+      "size_bytes": 26214400,
+      "sha256": "38751c808f100ff572531ef855e65e7c9e1bdcd6c6dbbced2ba870803a25e836"
+    },
+    {
+      "index": 17,
+      "file": "MasterPortxx_0017.mpx",
+      "size_bytes": 26214400,
+      "sha256": "ad64501dba643da192aed4cbdbb267409a25283c78a4bfccb6788c4bc6effc92"
+    },
+    {
+      "index": 18,
+      "file": "MasterPortxx_0018.mpx",
+      "size_bytes": 26214400,
+      "sha256": "1577e96722d35f39a5673f4795f8e0b418418aaf02337727275159584f098fac"
+    },
+    {
+      "index": 19,
+      "file": "MasterPortxx_0019.mpx",
+      "size_bytes": 26214400,
+      "sha256": "3d88e4825c665d5ed37521dd70bf26c08b0224e54dc66e09892b095ae5c8f77b"
+    },
+    {
+      "index": 20,
+      "file": "MasterPortxx_0020.mpx",
+      "size_bytes": 26214400,
+      "sha256": "9550c1597fedfb932c7e801302faa0d50d2ce59de1b5bf58ca780e2a0913fafc"
+    },
+    {
+      "index": 21,
+      "file": "MasterPortxx_0021.mpx",
+      "size_bytes": 26214400,
+      "sha256": "4e93d6459651182640ecf7b4e15f4aa0d466d6957752be7b58510b2f192beb09"
+    },
+    {
+      "index": 22,
+      "file": "MasterPortxx_0022.mpx",
+      "size_bytes": 26214400,
+      "sha256": "fd8b307c00c59e2a7cb7dbc835d13582534cadf52d637a1cd2a3d2d3d6af80fa"
+    },
+    {
+      "index": 23,
+      "file": "MasterPortxx_0023.mpx",
+      "size_bytes": 26214400,
+      "sha256": "abff20b6a956cd23db63626462a587cef2f8e3072e68dbdf381e71e38e991173"
+    },
+    {
+      "index": 24,
+      "file": "MasterPortxx_0024.mpx",
+      "size_bytes": 26214400,
+      "sha256": "ff628388e86350cc10cc70c1b38b00a9eecf442fff46bb9d7a36f54b8acc9b98"
+    },
+    {
+      "index": 25,
+      "file": "MasterPortxx_0025.mpx",
+      "size_bytes": 26214400,
+      "sha256": "19f9ec652768f6a22607fe144f1cb5a8a99f8a637400280463de4382147f8eb9"
+    },
+    {
+      "index": 26,
+      "file": "MasterPortxx_0026.mpx",
+      "size_bytes": 26214400,
+      "sha256": "8ce2a549247d84912de5a0a4290d825d40f69b60990733549547ab26bae49b39"
+    },
+    {
+      "index": 27,
+      "file": "MasterPortxx_0027.mpx",
+      "size_bytes": 26214400,
+      "sha256": "de146514a1551c2d45139e6fc2c2594a88462cfba64e16895f3f8e05091ffd46"
+    },
+    {
+      "index": 28,
+      "file": "MasterPortxx_0028.mpx",
+      "size_bytes": 26214400,
+      "sha256": "af221877cbc7f077d42b4c678bdd038f22f870a6d12380e6684f5f995ebc458c"
+    },
+    {
+      "index": 29,
+      "file": "MasterPortxx_0029.mpx",
+      "size_bytes": 26214400,
+      "sha256": "407b2ee4c614fe87b8184b661146adbf9578e0b0553928846c09b43d7a13da4d"
+    },
+    {
+      "index": 30,
+      "file": "MasterPortxx_0030.mpx",
+      "size_bytes": 26214400,
+      "sha256": "d99634a377211ebe98727a936ea030de4b3b82489f344e095902b70b3156b14f"
+    },
+    {
+      "index": 31,
+      "file": "MasterPortxx_0031.mpx",
+      "size_bytes": 26214400,
+      "sha256": "f20c59e67865538aa335cbd4dbd3fb7a533f13e0e3f4dc31c2ffb947aa319589"
+    },
+    {
+      "index": 32,
+      "file": "MasterPortxx_0032.mpx",
+      "size_bytes": 26214400,
+      "sha256": "6e33a6e79488234f7ac99dffc89e306441ff3be7b749ce251c0230d6ea47e743"
+    },
+    {
+      "index": 33,
+      "file": "MasterPortxx_0033.mpx",
+      "size_bytes": 26214400,
+      "sha256": "4e0b93765b25a97f2ff7d1850537e22a4c430312b7c5e884751b4d3bc29e9d4c"
+    },
+    {
+      "index": 34,
+      "file": "MasterPortxx_0034.mpx",
+      "size_bytes": 26214400,
+      "sha256": "7827ae1707b63788b7f353c888cb1a5fdb7270c8170668be135dd90c4ade783f"
+    },
+    {
+      "index": 35,
+      "file": "MasterPortxx_0035.mpx",
+      "size_bytes": 26214400,
+      "sha256": "862f9331b70a9c751cf92b5310fd4e33811a90da20dcbf0ac970b23c3bfa6e7e"
+    },
+    {
+      "index": 36,
+      "file": "MasterPortxx_0036.mpx",
+      "size_bytes": 26214400,
+      "sha256": "10303f183e095a62ed82f70491cf005daf380b71c8f53837abbd8a885720b7df"
+    },
+    {
+      "index": 37,
+      "file": "MasterPortxx_0037.mpx",
+      "size_bytes": 26214400,
+      "sha256": "b8ea034e7fadf174a36c76af4fa34489632d18715a6333bfabd67de7e267c7e9"
+    },
+    {
+      "index": 38,
+      "file": "MasterPortxx_0038.mpx",
+      "size_bytes": 26214400,
+      "sha256": "403d1eb259fdf393d25c5dd70304416ac5ebe77160e98ec64ebb2dbe15a1e651"
+    },
+    {
+      "index": 39,
+      "file": "MasterPortxx_0039.mpx",
+      "size_bytes": 26214400,
+      "sha256": "d80592707696e6d1564027f4c58a3e3f6e699d65ff4b89be831f46fadcf3f0e8"
+    },
+    {
+      "index": 40,
+      "file": "MasterPortxx_0040.mpx",
+      "size_bytes": 26214400,
+      "sha256": "98a1bd13b8fdc8c6379296797e3a4d0108455e7f2070545bef72b7955c5d98ee"
+    },
+    {
+      "index": 41,
+      "file": "MasterPortxx_0041.mpx",
+      "size_bytes": 26214400,
+      "sha256": "69f33b0af08fe7f79e348a7e017844f2534e84d445b7736a5cea08935b3750ab"
+    },
+    {
+      "index": 42,
+      "file": "MasterPortxx_0042.mpx",
+      "size_bytes": 26214400,
+      "sha256": "f76a2721b01c8e9dcbe69818c262893ec87f0e07d58d941e9a4bbe2d86050c80"
+    },
+    {
+      "index": 43,
+      "file": "MasterPortxx_0043.mpx",
+      "size_bytes": 26214400,
+      "sha256": "389dcec1ab4a74f1bc056536762066e5d50bf10e06039d26316c7cd402f75705"
+    },
+    {
+      "index": 44,
+      "file": "MasterPortxx_0044.mpx",
+      "size_bytes": 26214400,
+      "sha256": "32240344fc0ef656afd2bb394e27663eb05ee6d289fea19acf069dcb55e740e6"
+    },
+    {
+      "index": 45,
+      "file": "MasterPortxx_0045.mpx",
+      "size_bytes": 9179799,
+      "sha256": "4daa0083fa9e187918a50c57d1f572b740caebaeb8a59ad831b851990e8b839c"
+    }
+  ],
+  "gamelist": {
+    "path": "./Melee.sh",
+    "name": "Super Smash Bros. Melee",
+    "image": "./melee/cover.png"
+  },
+  "zip_size_bytes": 1162613399,
+  "total_parts": 45,
+  "created_at": "2026-09-27T11:25:19"
+}
