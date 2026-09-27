@@ -2,8 +2,10 @@
           MASTERPORTXX - NOVIDADES
 ==================================================
 
-DATA: 26/09/2026
+DATA: 27/09/2026
 VERSÃO: DOWNLOADER v1.5.7
+
+adicionado novo port de Black Tiger para Megadrive
 
 🆕 NOVO PAINEL "NOVIDADES"
 
