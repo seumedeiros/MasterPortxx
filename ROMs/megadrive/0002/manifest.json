@@ -1,12 +1,12 @@
 {
   "format": "MasterPortxx",
   "format_version": 1,
-  "packer_version": "1.5.6",
+  "packer_version": "1.5.2",
   "package_id": "0002",
-  "original_name": "Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese).zip",
+  "original_name": "Project A-51 110926.zip",
   "compression": "zip",
   "part_size_bytes": 26214400,
-  "source_size_bytes": 714047,
+  "source_size_bytes": 1008503,
   "file_count": 1,
   "payload": "payload.zip",
   "package_type": "rom",
@@ -14,23 +14,23 @@
     {
       "index": 1,
       "file": "MasterPortxx_0001.mpx",
-      "size_bytes": 890784,
-      "sha256": "db35ea82527ab0cf92fcc9f23474eab53700065b12ec6c2b9fa91889ee7d141d"
+      "size_bytes": 1299558,
+      "sha256": "f45056b374249d95f8253ec6f098d3f0c1db46b13b2a9e5b39128e63cf76e891"
     }
   ],
   "type": "rom",
   "system_folder": "megadrive",
   "destination": "/userdata/roms/megadrive",
-  "rom_name": "Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese).zip",
+  "rom_name": "Project A-51 110926.zip",
   "media": {
-    "image": "./images/Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese)-image.png",
+    "image": "./images/Project A-51 110926-image.png",
     "marquee": null,
     "thumbnail": null
   },
-  "image": "./images/Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese)-image.png",
+  "image": "./images/Project A-51 110926-image.png",
   "marquee": null,
   "thumbnail": null,
-  "zip_size_bytes": 890784,
+  "zip_size_bytes": 1299558,
   "total_parts": 1,
-  "created_at": "2026-09-27T06:33:59"
+  "created_at": "2026-09-24T09:41:39"
 }
