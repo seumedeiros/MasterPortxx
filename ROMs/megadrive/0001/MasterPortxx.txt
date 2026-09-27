@@ -3,6 +3,6 @@ Format: MasterPortxx
 Version: 1
 Package ID: 0001
 System: megadrive
-Original name: Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese).zip
+Original name: blacktiger_MD_v1.2.zip
 Parts: 1
-ZIP size: 890784
+ZIP size: 1629970

@@ -3,6 +3,6 @@ Format: MasterPortxx
 Version: 1
 Package ID: 0002
 System: megadrive
-Original name: Project A-51 110926.zip
+Original name: Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese).zip
 Parts: 1
-ZIP size: 1299558
+ZIP size: 890784
