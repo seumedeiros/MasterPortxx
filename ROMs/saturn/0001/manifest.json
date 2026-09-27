@@ -1,7 +1,7 @@
 {
   "format": "MasterPortxx",
   "format_version": 1,
-  "packer_version": "1.5",
+  "packer_version": "1.5.6",
   "package_id": "0001",
   "original_name": "Bulk Slash (English v1.001)[Undub].chd",
   "compression": "zip",
@@ -15,44 +15,40 @@
       "index": 1,
       "file": "MasterPortxx_0001.mpx",
       "size_bytes": 26214400,
-      "sha256": "0010361c79b0c1f430ce84a51cbe62fc5cfd6dbe0697c83c1481b7490c15e789"
+      "sha256": "c17d33d2d6611c1ba11a70c606f77037f0791a46ed872c276bdc5ffc6bda2b0b"
     },
     {
       "index": 2,
       "file": "MasterPortxx_0002.mpx",
       "size_bytes": 26214400,
-      "sha256": "f0da9a95d19cc2bb650e59479818c8c3d99192b68f87637683afdd6d09f728f0"
+      "sha256": "1d1308acdf70a39b8d431870dbf9982fd57ba410cf45388bbd003ef6f233923e"
     },
     {
       "index": 3,
       "file": "MasterPortxx_0003.mpx",
       "size_bytes": 26214400,
-      "sha256": "fefdf4e919255d30308178dc97b67eaf8eba2971b328bdcd0393effee37d8c4a"
+      "sha256": "c2096fa776c1d8e2db141e893306c3444a9eee913d4fcf12ef06e77067b8f507"
     },
     {
       "index": 4,
       "file": "MasterPortxx_0004.mpx",
-      "size_bytes": 9247111,
-      "sha256": "beb1954098cf93c84cfc1c8684bc03adfc332438022141d26f50a9d3adfd1342"
+      "size_bytes": 9548286,
+      "sha256": "825ed4462f7c616beb4abcbb51182722fc5c0276de0f645a6199799302379121"
     }
   ],
   "type": "rom",
   "system_folder": "saturn",
   "destination": "/userdata/roms/saturn",
   "rom_name": "Bulk Slash (English v1.001)[Undub].chd",
-  "gamelist": {
-    "path": "./Bulk Slash (English v1.001)[Undub].chd",
-    "name": "Bulk Slash (English v1.001)[Undub]",
-    "image": "./images/Bulk Slash (English v1.001)[Undub]-image.png",
-    "marquee": "./images/Bulk Slash (English v1.001)[Undub]-marquee.png",
-    "thumbnail": "./images/Bulk Slash (English v1.001)[Undub]-thumb.png"
-  },
   "media": {
-    "image": null,
+    "image": "./images/Bulk Slash (English v1.001)[Undub]-image.png",
     "marquee": null,
     "thumbnail": null
   },
-  "zip_size_bytes": 87890311,
+  "image": "./images/Bulk Slash (English v1.001)[Undub]-image.png",
+  "marquee": null,
+  "thumbnail": null,
+  "zip_size_bytes": 88191486,
   "total_parts": 4,
-  "created_at": "2026-09-24T08:53:32"
+  "created_at": "2026-09-27T06:34:03"
 }
