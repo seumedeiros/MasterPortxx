@@ -4,7 +4,7 @@
   "system": "megadrive",
   "packages": [
     {
-      "id": "0001",
+      "id": "0004",
       "title": "blacktiger_MD_v1.2.zip",
       "type": "rom",
       "image": "./images/blacktiger_MD_v1.2-image.png",
@@ -12,7 +12,7 @@
       "thumbnail": null
     },
     {
-      "id": "0002",
+      "id": "0001",
       "title": "Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese).zip",
       "type": "rom",
       "image": "./images/Golden Axe III (Definitive Edition v1.0.3)(Brazilian Portuguese)-image.png",
@@ -20,7 +20,7 @@
       "thumbnail": null
     },
     {
-      "id": "0003",
+      "id": "0002",
       "title": "Project A-51 110926.zip",
       "type": "rom",
       "image": "./images/Project A-51 110926-image.png",
@@ -28,7 +28,7 @@
       "thumbnail": null
     },
     {
-      "id": "0004",
+      "id": "0003",
       "title": "Real Bout Fatal Fury Genesis (Homebrew vLite2.0).zip",
       "type": "rom",
       "image": "./images/Real Bout Fatal Fury Genesis (Homebrew vLite2.0)-image.png",
