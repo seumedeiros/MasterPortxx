@@ -552,7 +552,7 @@ PORTS_DIR = DEFAULT_PORTS_DIR
 APP_UPDATE_URL = DEFAULT_APP_UPDATE_URL
 APP_PATH = os.path.join(APP_DIR, "app.py")
 APP_BACKUP_PATH = os.path.join(APP_DIR, "app.bkp")
-APP_VERSION = "v1.5.7"
+APP_VERSION = "v1.5.8"
 
 # GitHub ROM catalog
 GITHUB_API_BASE = "https://api.github.com/repos/seumedeiros/MasterPortxx/contents"
@@ -571,6 +571,11 @@ COVER_FILENAME = "cover.png"
 NEWS_FILENAME = "novidades.txt"
 NEWS_CACHE_DIR = "/userdata/system/configs"
 NEWS_CACHE_PATH = os.path.join(NEWS_CACHE_DIR, NEWS_FILENAME)
+
+# Armazenamento temporario para downloads grandes.
+# Nao usar /tmp: em alguns dispositivos ele possui pouco espaco.
+TEMP_ROOT = "/userdata/system/.masterportxx"
+TEMP_RESERVE_BYTES = 64 * 1024 * 1024
 
 games = []
 selected = 0
@@ -1339,6 +1344,56 @@ def rom_destination(system_name, relative_name):
     return destination
 
 
+def ensure_temp_root():
+    os.makedirs(TEMP_ROOT, exist_ok=True)
+    return TEMP_ROOT
+
+
+def format_bytes(value):
+    value = float(max(0, value))
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < 1024 or unit == "TB":
+            return "%.2f %s" % (value, unit)
+        value /= 1024.0
+
+
+def check_download_space(manifest, destination, title):
+    """Verifica espaco antes de iniciar um pacote grande.
+
+    O Downloader precisa manter o payload.zip reconstruido e depois extrair
+    os arquivos do pacote. Por isso usamos uma estimativa conservadora:
+    zip_size + source_size + uma reserva de seguranca.
+    """
+    ensure_temp_root()
+    try:
+        free = shutil.disk_usage(TEMP_ROOT).free
+    except Exception as exc:
+        raise RuntimeError("Nao foi possivel verificar o espaco livre: " + str(exc))
+
+    zip_size = int(manifest.get("zip_size_bytes", 0))
+    source_size = int(manifest.get("source_size_bytes", 0))
+    needed = zip_size + source_size + TEMP_RESERVE_BYTES
+
+    if needed <= 0:
+        return
+
+    if free < needed:
+        show_status("ESPACO INSUFICIENTE", [
+            title,
+            "",
+            "Livre: " + format_bytes(free),
+            "Necessario: " + format_bytes(needed),
+            "",
+            "Libere espaco e tente novamente.",
+            "",
+            "A/B = Voltar"
+        ])
+        raise RuntimeError(
+            "Espaco insuficiente. Livre: %s | Necessario: %s"
+            % (format_bytes(free), format_bytes(needed))
+        )
+
+
 def load_rom_manifest(system_folder, package_id, temp_dir):
     package_id = str(package_id).zfill(4)
     if len(package_id) != 4 or not package_id.isdigit():
@@ -1381,11 +1436,12 @@ def download_rom(item):
     system_folder = rom_system_path.split("/")[-1]
     package_id = str(item.get("id", "")).zfill(4)
     title = str(item.get("title", item.get("name", package_id)))
-    temp_dir = tempfile.mkdtemp(prefix="masterportxx_rom_")
+    temp_dir = tempfile.mkdtemp(prefix="rom_", dir=ensure_temp_root())
 
     try:
         show_status("PREPARANDO ROM", [system_folder, title, "", "Baixando manifesto..."])
         manifest = load_rom_manifest(system_folder, package_id, temp_dir)
+        check_download_space(manifest, os.path.join(ROMS_LOCAL_BASE, system_folder), title)
         parts = sorted(manifest["parts"], key=lambda p: int(p["index"]))
         zip_path = os.path.join(temp_dir, "payload.zip")
 
@@ -1790,7 +1846,7 @@ def download_package(game):
     if len(package_id) != 4 or not package_id.isdigit():
         raise RuntimeError("ID inválido: " + package_id)
 
-    temp_dir = tempfile.mkdtemp(prefix="masterportxx_")
+    temp_dir = tempfile.mkdtemp(prefix="port_", dir=ensure_temp_root())
 
     try:
         show_status(
@@ -1804,6 +1860,7 @@ def download_package(game):
         )
 
         manifest = load_manifest(package_id, temp_dir)
+        check_download_space(manifest, PORTS_DIR, title)
 
         parts = sorted(
             manifest["parts"],
